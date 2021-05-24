@@ -10,7 +10,7 @@
 % String ::= '"' AnyCharSansDQ* '"' | '’' AnyCharSansSQ* '’'
 % AnyCharSansDQ ::= <qualunque carattere (ASCII) diverso da '"'>
 % AnyCharSansSQ ::= <qualunque carattere (ASCII) diverso da '’'>
-%##
+
 
 %% 'asd' -> atomo
 %% "asd" -> String
