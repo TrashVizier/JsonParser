@@ -11,6 +11,7 @@
 % AnyCharSansDQ ::= <qualunque carattere (ASCII) diverso da '"'>
 % AnyCharSansSQ ::= <qualunque carattere (ASCII) diverso da '’'>
 
+%% I have been here
 
 %% 'asd' -> atomo
 %% "asd" -> String
