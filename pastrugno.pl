@@ -11,7 +11,6 @@
 % AnyCharSansDQ ::= <qualunque carattere (ASCII) diverso da '"'>
 % AnyCharSansSQ ::= <qualunque carattere (ASCII) diverso da '’'>
 
-%% I have been here
 
 %% 'asd' -> atomo
 %% "asd" -> String
@@ -27,7 +26,7 @@ json(A) :- array(A).
 %%% object/1
 % Il predicato è vero quando Input è un oggetto
 
-object(Input) :-
+object(Input) :- 
     togligraffe(Input, I_senza_graffe),
     atomic_list_concat(Lista, ', ', I_senza_graffe),
     members(Lista).
@@ -37,33 +36,33 @@ object(Input) :-
 %%% members/1
 % il predicato è vero quando Input è un membro
 members([]).
-members([H | Tail]) :-
+members([H | Tail]) :- 
     pair(H),
     members(Tail).
 
 %%% pair/1
-% Il predicato è vero quando Input è una coppia del tipo 'String : Valore'
+% Il predicato è vero quando Input è una coppia del tipo 'String : Valore' 
 
-pair(Input) :-
+pair(Input) :- 
     spezza_pair(Input, S, V),
     string(S),                                                              %% ERRORE
     value(V).
 
 %%% array/1
 array('').
-array(Input) :-
+array(Input) :- 
     togliquadre(Input, E),
     atomic_list_concat(Lista, ', ', E),
     elements(Lista).
 
 %%% elements/1
 elements([]).
-elements([H | Tail]) :-
+elements([H | Tail]) :- 
     value(H),
     elements(Tail).
 
 
-%%% value/1
+%%% value/1 
 value(I) :- json(I).
 value(I) :- num(I).
 value(I) :- string(I).
@@ -71,7 +70,7 @@ value(I) :- string(I).
 
 %%% num/1
 % Il predicato è vero se Input è un numero
-% num(Input) :-
+% num(Input) :- 
 %     atomic_list_concat([Int_char, Float_char], '.', Input),
 %     atom_number(Int_char, Int),
 %     atom_number(Float_char, Float),
@@ -84,7 +83,7 @@ value(I) :- string(I).
 num(N) :- number(N).                %% se mi arriva un numero puro (es. 42)
 
 num(Input) :-                       %% se mi arriva una stringa con un numero (es "42")
-    number_string(N, Input),
+    number_string(N, Input),        
     number(N).
 
 % %%% string/1
@@ -112,17 +111,17 @@ cifra(8).
 cifra(9).
 
 %%% togligraffe/2
-togligraffe(I, I_senza_graffe) :-
+togligraffe(I, I_senza_graffe) :- 
     atom_concat('{', I_sx, I),
     atom_concat(I_senza_graffe, '}', I_sx).
-
+    
 %%% togliquadre/2
-togliquadre(I, I_senza_quadre) :-
+togliquadre(I, I_senza_quadre) :- 
     atom_concat('[', I_sx, I),
     atom_concat(I_senza_quadre, ']', I_sx).
 
 %%% toglivirgolette/2
-toglivirgolette(I, I_pulito) :-
+toglivirgolette(I, I_pulito) :- 
     atom_concat('"', I_sx, I),
     atom_concat(I_pulito, '"', I_sx).
 
@@ -134,7 +133,7 @@ json_parse(JSONString, Object) :-
 
 parse_supp([], X, X).
 
-parse_supp([H | Tail], Precedente, Obj) :-
+parse_supp([H | Tail], Precedente, Obj) :- 
   %%  atom_string(Head, H),                                   %% lo converto a stringa
     object(H),                                              %% SE è UN OGGETTO
     togligraffe(H, H_senza_graffe),                         %% tolgo le graffe
@@ -142,7 +141,7 @@ parse_supp([H | Tail], Precedente, Obj) :-
     parse_supp(Lista_membri, Precedente, Obj),              %% chiamo sul primo membro
     parse_supp(Tail, Precedente, Obj).                      %% chiamo sulla coda
 
-parse_supp([H | Tail], Precedente, Obj) :-
+parse_supp([H | Tail], Precedente, Obj) :-  
    %% atom_string(Head, H),                                       %% lo converto a stringa
     array(H),                                                   %% SE è UN ARRAY
     togliquadre(H, H_senza_graffe),                             %% tolgo le quadre
@@ -152,10 +151,10 @@ parse_supp([H | Tail], Precedente, Obj) :-
 
 %%%%%%%%%%%%%%%%%% WIP
 
-parse_supp([Head | Tail], Precedente, Obj) :-
+parse_supp([Head | Tail], Precedente, Obj) :- 
 %%  atom_string(Head, H),                           %% lo converto a stringa
     pair(H),                                        %% SE è un PAIR
-    spezza_pair(H, S, V),                           %% lo spezzo nella lista [S, V]
+    spezza_pair(H, S, V),                           %% lo spezzo nella lista [S, V]  
     string(S),                                      %% se S è una stringa
     check_value(V, V_trattata)                      %% chiamo su V
     incapsula_tonde(S, V_trattata, Coppia),
@@ -179,7 +178,7 @@ check_value(S, S) :- stringa(S).
 
 check_value(N, N) :- num(N).
 
-check_value(V, X) :-
+check_value(V, X) :- 
     json(V),
     parse_supp([V], [], X).
 
