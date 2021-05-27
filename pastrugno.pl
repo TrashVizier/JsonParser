@@ -45,7 +45,7 @@ members([H | Tail]) :-
 
 pair(Input) :- 
     spezza_pair(Input, S, V),
-    string(S),                                                              %% ERRORE
+    stringa(S),                                                              %% ERRORE
     value(V).
 
 %%% array/1
@@ -65,8 +65,13 @@ elements([H | Tail]) :-
 %%% value/1 
 value(I) :- json(I).
 value(I) :- num(I).
-value(I) :- string(I).
+value(I) :- stringa(I).
 
+
+stringa(S) :-
+    toglivirgolette(S, X),
+    atom_string(X, Y),
+    string(Y).
 
 %%% num/1
 % Il predicato è vero se Input è un numero
@@ -80,11 +85,13 @@ value(I) :- string(I).
 % num(Input) :- integer(Input).
 
 
-num(N) :- number(N).                %% se mi arriva un numero puro (es. 42)
+num(An) :-                           %% se mi arriva un numero atomico (es. '42')
+    atom_number(An, N), 
+    number(N).               
 
 num(Input) :-                       %% se mi arriva una stringa con un numero (es "42")
-    number_string(N, Input),        
-    number(N).
+    toglivirgolette(Input, X),
+    num(X).
 
 % %%% string/1
 % stringa(Input) :-
@@ -131,19 +138,19 @@ json_parse(JSONString, Object) :-
     rimuovi_newline(JSONString, String),
     parse_supp([String], [], Object).
 
-parse_supp([], X, X).
+parse_supp([], _, _) :- !.
 
 parse_supp([H | Tail], Precedente, Obj) :- 
   %%  atom_string(Head, H),                                   %% lo converto a stringa
-    object(H),                                              %% SE è UN OGGETTO
+    object(H), !,                                             %% SE è UN OGGETTO
     togligraffe(H, H_senza_graffe),                         %% tolgo le graffe
     atomic_list_concat(Lista_membri, ', ', H_senza_graffe), %% lo spezzo nella lista [P, P, P]
-    parse_supp(Lista_membri, Precedente, Obj),              %% chiamo sul primo membro
+    parse_supp_pair(Lista_membri, Precedente, Obj),              %% chiamo sul primo membro
     parse_supp(Tail, Precedente, Obj).                      %% chiamo sulla coda
 
 parse_supp([H | Tail], Precedente, Obj) :-  
    %% atom_string(Head, H),                                       %% lo converto a stringa
-    array(H),                                                   %% SE è UN ARRAY
+    array(H), !,                                                 %% SE è UN ARRAY
     togliquadre(H, H_senza_graffe),                             %% tolgo le quadre
     atomic_list_concat(Lista_elementi, ', ', H_senza_graffe),   %% spezzo nella lista [E, E, E]
     parse_supp(Lista_elementi, Precedente, Obj),                %% chiamo sulla testa
@@ -151,16 +158,17 @@ parse_supp([H | Tail], Precedente, Obj) :-
 
 %%%%%%%%%%%%%%%%%% WIP
 
-parse_supp([Head | Tail], Precedente, Obj) :- 
+parse_supp_pair([H | Tail], Precedente, Obj) :- 
 %%  atom_string(Head, H),                           %% lo converto a stringa
-    pair(H),                                        %% SE è un PAIR
+    pair(H), !,                                       %% SE è un PAIR       %% PROBABILMENTE INUTILE
     spezza_pair(H, S, V),                           %% lo spezzo nella lista [S, V]  
-    string(S),                                      %% se S è una stringa
-    check_value(V, V_trattata)                      %% chiamo su V
+    stringa(S),                                      %% se S è una stringa  %% PROBABILMENTE è INUTILE
+    check_value(V, V_trattata),                      %% chiamo su V
     incapsula_tonde(S, V_trattata, Coppia),
     append(Precedente, Coppia, Successiva),
-    parse_supp(Tail, Successiva, Obj).              %% chiamo sulla coda
+    parse_supp_pair(Tail, Successiva, Obj).              %% chiamo sulla coda
 
+parse_supp_pair([], X, X).
 
 % parse_supp([H | Tail], Precedente, Obj) :-
 %     num(H),     %%%WIP
