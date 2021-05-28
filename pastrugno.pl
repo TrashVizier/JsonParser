@@ -63,12 +63,11 @@ elements([H | Tail]) :-
 
 
 %%% value/1 
-value(I) :- json(I).
 value(I) :- num(I).
 value(I) :- stringa(I).
+value(I) :- json(I).
 
-
-stringa(S) :-
+stringa(S) :-                       %% risistemare '"313"' me lo prende come stringa
     toglivirgolette(S, X),
     atom_string(X, Y),
     string(Y).
@@ -104,18 +103,6 @@ num(Input) :-                       %% se mi arriva una stringa con un numero (e
 % carattere([H | Tail]) :-
 %     not(H is 34),
 %     carattere(Tail).
-
-%%% cifra/1
-cifra(0).
-cifra(1).
-cifra(2).
-cifra(3).
-cifra(4).
-cifra(5).
-cifra(6).
-cifra(7).
-cifra(8).
-cifra(9).
 
 %%% togligraffe/2
 togligraffe(I, I_senza_graffe) :- 
@@ -165,7 +152,7 @@ parse_supp_pair([H | Tail], Precedente, Obj) :-
     stringa(S),                                      %% se S è una stringa  %% PROBABILMENTE è INUTILE
     check_value(V, V_trattata),                      %% chiamo su V
     incapsula_tonde(S, V_trattata, Coppia),
-    append(Precedente, Coppia, Successiva),
+    append(Precedente, [Coppia], Successiva),
     parse_supp_pair(Tail, Successiva, Obj).              %% chiamo sulla coda
 
 parse_supp_pair([], X, X).
@@ -182,12 +169,14 @@ parse_supp_pair([], X, X).
 
 %%% Supporto a caso
 
-check_value(S, S) :- stringa(S).
 
-check_value(N, N) :- num(N).
+
+check_value(N, N) :- num(N), !.
+
+check_value(S, S) :- stringa(S), !.
 
 check_value(V, X) :- 
-    json(V),
+    json(V),                                    %% probabilmente inutile
     parse_supp([V], [], X).
 
 
