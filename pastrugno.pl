@@ -28,7 +28,8 @@ json(A) :- array(A).
 
 object(Input) :- 
     togligraffe(Input, I_senza_graffe),
-    atomic_list_concat(Lista, ', ', I_senza_graffe),
+    member_breaker(I_senza_graffe, Lista),
+    % atomic_list_concat(Lista, ', ', I_senza_graffe),
     members(Lista).
 
 
@@ -52,7 +53,8 @@ pair(Input) :-
 array('').
 array(Input) :- 
     togliquadre(Input, E),
-    atomic_list_concat(Lista, ', ', E),
+    member_breaker(E, Lista),
+    % atomic_list_concat(Lista, ', ', E),
     elements(Lista).
 
 %%% elements/1
@@ -71,18 +73,6 @@ stringa(S) :-                       %% risistemare '"313"' me lo prende come str
     toglivirgolette(S, X),
     atom_string(X, Y),
     string(Y).
-
-%%% num/1
-% Il predicato è vero se Input è un numero
-% num(Input) :- 
-%     atomic_list_concat([Int_char, Float_char], '.', Input),
-%     atom_number(Int_char, Int),
-%     atom_number(Float_char, Float),
-%     integer(Int),
-%     integer(Float).
-
-% num(Input) :- integer(Input).
-
 
 num(An) :-                           %% se mi arriva un numero atomico (es. '42')
     atom_number(An, N), 
@@ -131,7 +121,8 @@ parse_supp([H | Tail], Precedente, Obj) :-
   %%  atom_string(Head, H),                                   %% lo converto a stringa
     object(H), !,                                             %% SE è UN OGGETTO
     togligraffe(H, H_senza_graffe),                         %% tolgo le graffe
-    atomic_list_concat(Lista_membri, ', ', H_senza_graffe), %% lo spezzo nella lista [P, P, P]
+    member_breaker(H_senza_graffe, Lista_membri),
+    % atomic_list_concat(Lista_membri, ', ', H_senza_graffe), %% lo spezzo nella lista [P, P, P]
     parse_supp_pair(Lista_membri, Precedente, Obj),              %% chiamo sul primo membro
     parse_supp(Tail, Precedente, Obj).                      %% chiamo sulla coda
 
@@ -139,7 +130,8 @@ parse_supp([H | Tail], Precedente, Obj) :-
    %% atom_string(Head, H),                                       %% lo converto a stringa
     array(H), !,                                                 %% SE è UN ARRAY
     togliquadre(H, H_senza_graffe),                             %% tolgo le quadre
-    atomic_list_concat(Lista_elementi, ', ', H_senza_graffe),   %% spezzo nella lista [E, E, E]
+    member_breaker(H_senza_graffe, Lista_elementi),
+    % atomic_list_concat(Lista_elementi, ', ', H_senza_graffe),   %% spezzo nella lista [E, E, E]
     parse_supp(Lista_elementi, Precedente, Obj),                %% chiamo sulla testa
     parse_supp(Tail, Precedente, Obj).                          %% chiamo sulla coda
 
@@ -181,12 +173,40 @@ check_value(V, X) :-
 
 
 
+trim(String, Trim) :-
+    atom_chars(String, Chars),
+    trim_sx(Chars, Tsx),
+    reverse(Tsx, Tsxm),
+    trim_sx(Tsxm, Tdxm),
+    reverse(Tdxm, Tdx),
+    atom_chars(Trim, Tdx).
+
+trim_sx([' ' | Tail], T) :-
+    trim_sx(Tail, T).
+
+trim_sx([H | Tail], T) :-
+    not(H = ' '),
+    append([H], Tail, T).
 
 
 %%FUNGE
 
-spezza_pair(Coppia, S, V) :- atomic_list_concat([S, V], ' : ', Coppia), !.
-spezza_pair(Coppia, S, V) :- atomic_list_concat([S, V], ': ', Coppia), !.
+
+spezza_pair(Coppia, St, Vt) :- 
+    atom_chars(Coppia, Chars),
+    spezza_pair_sup(Chars, V_chars),
+    append(S_chars_dp, V_chars, Chars),
+    atom_chars(V, V_chars),
+    atom_chars(S_dp, S_chars_dp),
+    atom_concat(S, ':', S_dp),
+    trim(S, St),
+    trim(V, Vt).
+
+spezza_pair_sup([':' | Tail], Tail) :-!.
+
+spezza_pair_sup([H | Tail], Restante):-
+    not(H = ':'),
+    spezza_pair_sup(Tail, Restante).
 
 %%FUNGE
 
@@ -209,6 +229,87 @@ incapsula_tonde(S, V, Capsula) :-
     atom_concat(C2, V, C3),
     atom_concat(C3, ')', Capsula).
 
+%%% Funziona, ma mi da troppe opzioni e va ottimizzato
+
+member_breaker(String, Lista) :-
+    atom_chars(String, Chars),
+    spezza_members(Chars, "", [], Lista).
+
+%%
+
+
+spezza_members([], Buffer, Precedente, Finale) :-
+    append(Precedente, [Buffer], Finale), !.
+
+spezza_members([',' | Tail], Buffer, Precedente, Finale) :-      %% caso della virgola
+    append(Precedente, [Buffer], Successiva),                    %% aggiorno ciè che mi porto dietro   
+    spezza_members(Tail, "", Successiva, Finale).                %% itero sulla coda resettando il buffer
+
+spezza_members(['{' | Tail], Buffer, Precedente, Finale) :-      %% caso della graffa aperta
+    atom_concat(Buffer, '{', Buffer_con_graffa),               %% aggiorno il buffer con la graffa
+    spezza_alla_graffa(Tail, Sottoggetto, Coda),    %% recupero il sottoggetto che inizia
+    atom_concat(Buffer_con_graffa, Sottoggetto, Buffer_con_so),
+    spezza_members(Coda, Buffer_con_so, Precedente, Finale).       %% aggiorno il buffer con il sottoggetto ed itero sulla coda
+
+spezza_members(['[' | Tail], Buffer, Precedente, Finale) :-      %% caso della quadra aperta
+    atom_concat(Buffer, '[', Buffer_con_quadra),               %% aggiorno il buffer con la quadra
+    spezza_alla_quadra(Tail, Sottoggetto, Coda),    %% recupero il sottoggetto che inizia
+    atom_concat(Buffer_con_quadra, Sottoggetto, Buffer_con_array),
+    spezza_members(Coda, Buffer_con_array, Precedente, Finale).       %% aggiorno il buffer con il sottoggetto ed itero sulla coda
+
+spezza_members([H | Tail], Buffer, Precedente, Finale) :-         %% caso generale
+    atom_concat(Buffer, H, Buffer_aggiornato),                 %% aggiorno il buffer
+    spezza_members(Tail, Buffer_aggiornato, Precedente, Finale). %% itero sulla coda
+
+
+%%
+% il predicato è vero quando Sottoggetto è il sottooggetto estratto dalla lista di chars Chars e Chars_Coda sono i chars riamnenti
+%% N.B. Chars ha la prima graffa rimossa
+spezza_alla_graffa(Chars, Sottoggetto, Chars_coda) :-
+    spezza_sottoggetto(Chars, 1, Chars_coda),
+    append(Chars_SO, Chars_coda, Chars),
+    atom_chars(Sottoggetto, Chars_SO).
+
+spezza_sottoggetto(Tail, 0, Tail):- !.
+
+spezza_sottoggetto(['{' | Tail], Contatore, Lista_Tail) :-
+    Count is Contatore + 1,
+    spezza_sottoggetto(Tail, Count, Lista_Tail).
+    
+spezza_sottoggetto(['}' | Tail], Contatore, Lista_Tail) :-
+    Count is Contatore - 1,
+    spezza_sottoggetto(Tail, Count, Lista_Tail).
+
+spezza_sottoggetto([H | Tail], Contatore,  Lista_Tail) :-
+    not(H = '{'),
+    not(H = '}'),
+    spezza_sottoggetto(Tail, Contatore, Lista_Tail).
+
+%%
+% il predicato è vero quando Sottoggetto è il sottoarray estratto dalla lista di chars Chars e Chars_Coda sono i chars riamnenti
+%% N.B. Chars ha la prima quadra rimossa
+spezza_alla_quadra(Chars, Sottoggetto, Chars_coda) :-
+    spezza_sottoarray(Chars, 1, Chars_coda),
+    append(Chars_SO, Chars_coda, Chars),
+    atom_chars(Sottoggetto, Chars_SO).
+
+spezza_sottoarray(Tail, 0, Tail):- !.
+
+spezza_sottoarray(['[' | Tail], Contatore, Lista_Tail) :-
+    Count is Contatore + 1,
+    spezza_sottoarray(Tail, Count, Lista_Tail).
+    
+spezza_sottoarray([']' | Tail], Contatore, Lista_Tail) :-
+    Count is Contatore - 1,
+    spezza_sottoarray(Tail, Count, Lista_Tail).
+
+spezza_sottoarray([H | Tail], Contatore,  Lista_Tail) :-
+    not(H = '['),
+    not(H = ']'),
+    spezza_sottoarray(Tail, Contatore, Lista_Tail).
+
+
+
 %%%%%COSE UTILI
 % {"type": "menu", "value": "File", "items": [{"value": "New", "action": "CreateNewDoc"}, {"value": "Open", "action": "OpenDoc"}, {"value": "Close", "action": "CloseDoc"}]}
 
@@ -216,3 +317,8 @@ incapsula_tonde(S, V, Capsula) :-
 % atom_concat(1, 2, X)                          =====> X = '12'
 % atom_codes(pippo, X)                          =====> X = [112, 105, 112, 112, 111]
 % split_string("a.b.c.d", ".", "", L)           =====> L = ["a", "b", "c", "d"].
+
+%% a, {b, {c, d}, e}, f
+
+%%['"', a, '"', ':', 5, ',', '"', p, '"', ':', '{', '"', q, '"', ':', '"', z, '"', ',', '"', e, '"', ':', 1, '}']
+%% '"a" : 5, "p" : { "q" : "z", "e" : 1 }'
