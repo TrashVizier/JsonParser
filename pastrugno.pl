@@ -15,12 +15,15 @@
 %% 'asd' -> atomo
 %% "asd" -> String
 
-%%%% SISTEMARE I CONCAT
+%%%% Sistemare l'incapsulamento
 
+json(J) :- 
+    rimuovi_newline(J, String),
+    json_sup(String).
 
-json(O) :- object(O).
+json_sup(O) :- object(O).
 
-json(A) :- array(A).
+json_sup(A) :- array(A).
 
 
 %%% object/1
@@ -46,8 +49,10 @@ members([H | Tail]) :-
 
 pair(Input) :- 
     spezza_pair(Input, S, V),
-    stringa(S),                                                              %% ERRORE
-    value(V).
+    trim(S, St),
+    trim(V, Vt),
+    stringa(St),                                                              %% ERRORE
+    value(Vt).
 
 %%% array/1
 array('').
@@ -59,15 +64,17 @@ array(Input) :-
 
 %%% elements/1
 elements([]).
-elements([H | Tail]) :- 
-    value(H),
+elements([H | Tail]) :-
+    trim(H, Ht),
+    value(Ht),
     elements(Tail).
 
 
 %%% value/1 
 value(I) :- num(I).
 value(I) :- stringa(I).
-value(I) :- json(I).
+value(I) :- object(I).
+value(I) :- array(I).
 
 stringa(S) :-                       %% risistemare '"313"' me lo prende come stringa
     toglivirgolette(S, X),
@@ -115,39 +122,114 @@ json_parse(JSONString, Object) :-
     rimuovi_newline(JSONString, String),
     parse_supp([String], [], Object).
 
-parse_supp([], _, _) :- !.
+% parse_supp([], _, _) :- !.
 
-parse_supp([H | Tail], Precedente, Obj) :- 
+% parse_supp([H | Tail], Precedente, Obj) :- 
+%   %%  atom_string(Head, H),                                   %% lo converto a stringa
+%     object(H), !,                                             %% SE è UN OGGETTO
+%     togligraffe(H, H_senza_graffe),                         %% tolgo le graffe
+%     member_breaker(H_senza_graffe, Lista_membri),        %% lo spezzo nella lista [P, P, P]
+%     parse_supp_pair(Lista_membri, Precedente, Obj),              %% chiamo sul primo membro
+%     parse_supp(Tail, Precedente, Obj).                      %% chiamo sulla coda
+
+% parse_supp([H | Tail], Precedente, Obj) :-  
+%    %% atom_string(Head, H),                                       %% lo converto a stringa
+%     array(H), !,                                                 %% SE è UN ARRAY
+%     togliquadre(H, H_senza_graffe),                             %% tolgo le quadre
+%     member_breaker(H_senza_graffe, Lista_elementi),          %% spezzo nella lista [E, E, E]
+%     parse_supp(Lista_elementi, Precedente, Obj),                %% chiamo sulla testa
+%     parse_supp(Tail, Precedente, Obj).                          %% chiamo sulla coda
+
+% %%%%%%%%%%%%%%%%%% WIP
+
+% parse_supp_pair([H | Tail], Precedente, Obj) :- 
+% %%  atom_string(Head, H),                           %% lo converto a stringa
+%     pair(H), !,                                       %% SE è un PAIR       %% PROBABILMENTE INUTILE
+%     spezza_pair(H, S, V),                           %% lo spezzo nella lista [S, V]  
+%     stringa(S),                                      %% se S è una stringa  %% PROBABILMENTE è INUTILE
+%     check_value(V, V_trattata),                      %% chiamo su V
+%     incapsula_tonde(S, V_trattata, Coppia),
+%     append(Precedente, [Coppia], Successiva),
+%     parse_supp_pair(Tail, Successiva, Obj).              %% chiamo sulla coda
+
+% parse_supp_pair([], X, X).
+
+%%%%% ALTERNATIVO DI DUBBIO GUSTO NON TESTATO
+
+parse_supp([H |_], _,Obj) :- 
   %%  atom_string(Head, H),                                   %% lo converto a stringa
     object(H), !,                                             %% SE è UN OGGETTO
     togligraffe(H, H_senza_graffe),                         %% tolgo le graffe
-    member_breaker(H_senza_graffe, Lista_membri),
-    % atomic_list_concat(Lista_membri, ', ', H_senza_graffe), %% lo spezzo nella lista [P, P, P]
-    parse_supp_pair(Lista_membri, Precedente, Obj),              %% chiamo sul primo membro
-    parse_supp(Tail, Precedente, Obj).                      %% chiamo sulla coda
+    member_breaker(H_senza_graffe, Lista_membri),        %% lo spezzo nella lista [P, P, P]
+    incapsula_lista(Lista_membri, [], Lista),
+    attacca_obj(Lista, Obj).                 %% chiamo sulla coda
 
-parse_supp([H | Tail], Precedente, Obj) :-  
+parse_supp([H | _], _, Obj) :-  
    %% atom_string(Head, H),                                       %% lo converto a stringa
     array(H), !,                                                 %% SE è UN ARRAY
     togliquadre(H, H_senza_graffe),                             %% tolgo le quadre
-    member_breaker(H_senza_graffe, Lista_elementi),
-    % atomic_list_concat(Lista_elementi, ', ', H_senza_graffe),   %% spezzo nella lista [E, E, E]
-    parse_supp(Lista_elementi, Precedente, Obj),                %% chiamo sulla testa
-    parse_supp(Tail, Precedente, Obj).                          %% chiamo sulla coda
+    member_breaker(H_senza_graffe, Lista_elementi),          %% spezzo nella lista [E, E, E]
+    incapsula_lista(Lista_elementi, [], Lista),
+    attacca_array(Lista, Obj).                      
 
-%%%%%%%%%%%%%%%%%% WIP
+parse_supp_pair([], _, _).
 
-parse_supp_pair([H | Tail], Precedente, Obj) :- 
-%%  atom_string(Head, H),                           %% lo converto a stringa
-    pair(H), !,                                       %% SE è un PAIR       %% PROBABILMENTE INUTILE
-    spezza_pair(H, S, V),                           %% lo spezzo nella lista [S, V]  
-    stringa(S),                                      %% se S è una stringa  %% PROBABILMENTE è INUTILE
-    check_value(V, V_trattata),                      %% chiamo su V
-    incapsula_tonde(S, V_trattata, Coppia),
+
+
+%% non testato
+incapsula_lista([], Ob, Ob).
+
+incapsula_lista([H | Tail], Precedente, Ob) :-
+    spezza_pair(H, S, V),
+    stringa(V),
+    incapsula_tonde(S, V, Coppia),
     append(Precedente, [Coppia], Successiva),
-    parse_supp_pair(Tail, Successiva, Obj).              %% chiamo sulla coda
+    incapsula_lista(Tail, Successiva, Ob).
 
-parse_supp_pair([], X, X).
+incapsula_lista([H | Tail], Precedente, Ob) :-
+    spezza_pair(H, S, V),
+    num(V),
+    incapsula_tonde(S, V, Coppia),
+    append(Precedente, [Coppia], Successiva),
+    incapsula_lista(Tail, Successiva, Ob).
+
+incapsula_lista([H | Tail], Precedente, Ob) :-              %Ob = [(a:b), json_obj([(c:1), bla bla bla])], json_array([1, 2, 3])]
+    spezza_pair(H, S, V),                                   %% mi da problemi perchè nel caso di un array spezza una coppia che non esiste
+    json(V),
+    parse_supp([V], [], Ob_v),
+    incapsula_tonde(S, Ob_v, Coppia),
+    append(Precedente, [Coppia], Successiva),
+    incapsula_lista(Tail, Successiva, Ob).
+
+%%
+
+% lista_to_atom([], X, X).
+
+lista_to_atom([H | Tail], Precedente, Ob) :-
+    Tail = [],
+    concat(Precedente, H, Ob).
+
+lista_to_atom([H | Tail], Precedente, Ob) :-
+    concat(Precedente, H, P1),
+    concat(P1, ', ', Successiva),
+    lista_to_atom(Tail, Successiva, Ob).
+
+
+
+%%
+attacca_obj(Lista, Ob) :-
+    lista_to_atom(Lista, '', Atom),
+    concat('json_obj([', Atom, A1),
+    concat(A1, '])', Ob).
+
+attacca_array(Lista, Ob) :-
+    lista_to_atom(Lista, '', Atom),
+    concat('json_array([', Atom, A1),
+    concat(A1, '])', Ob).
+
+
+
+
 
 % parse_supp([H | Tail], Precedente, Obj) :-
 %     num(H),     %%%WIP
@@ -168,7 +250,7 @@ check_value(N, N) :- num(N), !.
 check_value(S, S) :- stringa(S), !.
 
 check_value(V, X) :- 
-    json(V),                                    %% probabilmente inutile
+    % json(V),                                    %% probabilmente inutile
     parse_supp([V], [], X).
 
 
@@ -224,10 +306,10 @@ concatena_lista([H | Tail], Precedente, String) :-
 
 %%FUNGE
 incapsula_tonde(S, V, Capsula) :-
-    atom_concat('(', S, C1),
-    atom_concat(C1, ', ', C2),
-    atom_concat(C2, V, C3),
-    atom_concat(C3, ')', Capsula).
+    concat('(', S, C1),
+    concat(C1, ', ', C2),
+    concat(C2, V, C3),
+    concat(C3, ')', Capsula).
 
 %%% Funziona, ma mi da troppe opzioni e va ottimizzato
 
