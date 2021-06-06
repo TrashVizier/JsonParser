@@ -1,3 +1,4 @@
+% -*- Mode: Prolog -*-
 % JSON ::= Object | Array
 % Object ::= '{}' | '{' Members '}'
 % Members ::= Pair | Pair ',' Members
