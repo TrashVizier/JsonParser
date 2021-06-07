@@ -190,8 +190,8 @@ rimuovi_newline(String, Riga) :-
     atomic_list_concat(Lista, '\n', String),
     concatena_lista(Lista, "", Riga).
 
-%%% concatena_lista/3
-concatena_lista([], X, X).
+%%% concatena_lista/3c
+oncatena_lista([], X, X).
 
 concatena_lista([H | Tail], Precedente, String) :-
     atom_concat(Precedente, H, Successiva),
