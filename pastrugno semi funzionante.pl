@@ -1,3 +1,4 @@
+% -*- Mode : Prolog -*-
 % JSON ::= Object | Array
 % Object ::= '{}' | '{' Members '}'
 % Members ::= Pair | Pair ',' Members
@@ -20,8 +21,9 @@
 %%% json/1
 % Il predicato è vero quando J è un Json
 
-json(J) :- 
-    rimuovi_newline(J, String),
+json(J) :-
+    atom_string(J, J1),             %%sperimentale
+    rimuovi_newline(J1, String),
     json_sup(String).
 
 json_sup(O) :- object(O), !.
@@ -36,6 +38,8 @@ object(Input) :-
     togligraffe(Input, I_senza_graffe),
     member_breaker(I_senza_graffe, Lista),
     members(Lista).
+
+
 
 %%% members/1
 % il predicato è vero quando Input è un membro
@@ -68,19 +72,27 @@ elements([H | Tail]) :-
     value(Ht),
     elements(Tail).
 
+
 %%% value/1 
 value(I) :- num(I), !.
 value(I) :- stringa(I), !.
 value(I) :- object(I), !.
 value(I) :- array(I), !.
 
+
 %%% stringa/1
 % Il predicato è vero se S è una stringa 
                                                             % N.B. '"313"' è una stringa, "313" no
+% stringa(S) :-
+%     toglivirgolette(S, X),
+%     atom_string(X, Y),
+%     string(Y).
+
 stringa(S) :-
-    toglivirgolette(S, X),
-    atom_string(X, Y),
-    string(Y).
+    string(S), !.
+
+stringa(S) :-
+    atom(S), !.
 
 %%% num/1
 % Il predicato è vero se l'argomento è un numero
@@ -95,30 +107,31 @@ num(Input) :-
 
 %%% togligraffe/2
 togligraffe(I, I_senza_graffe) :- 
-    atom_concat('{', I_sx, I),
-    atom_concat(I_senza_graffe, '}', I_sx).
+    string_concat('{', I_sx, I),
+    string_concat(I_senza_graffe, '}', I_sx).
 
 %%% togliquadre/2
 togliquadre(I, I_senza_quadre) :- 
-    atom_concat('[', I_sx, I),
-    atom_concat(I_senza_quadre, ']', I_sx).
+    string_concat('[', I_sx, I),
+    string_concat(I_senza_quadre, ']', I_sx).
 
 %%% toglivirgolette/2
 toglivirgolette(I, I_pulito) :- 
-    atom_concat('"', I_sx, I),
-    atom_concat(I_pulito, '"', I_sx).
+    string_concat('"', I_sx, I),
+    string_concat(I_pulito, '"', I_sx).
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 json_parse(JSONString, Object) :-
     rimuovi_newline(JSONString, String),
+    % atom_string(String, String1),   %%aggiunta sperimentale
     parse_supp(String, Object).
 
 parse_supp(H, json_obj(Obj)) :- 
     object(H), !,
     togligraffe(H, H_senza_graffe),
-    member_breaker(H_senza_graffe, Lista_membri),
+    member_breaker(H_senza_graffe, Lista_membri),       %%Lista_membri è una lista di atomi
     maplist(spezza_pair, Lista_membri, Lista_s, Lista_v),
     maplist(check_value, Lista_v, Lista_v_aggiornata),
     maplist(incapsula_tonde, Lista_s, Lista_v_aggiornata, Obj).
@@ -138,9 +151,15 @@ attacca_array(Lista, json_array(Lista)).
 %%%check_value/2
 % Il predicato è vero quadno Il secondo argomento è il risultato del parsing del primo argomento
 
-check_value(N, N) :- num(N), !.
+check_value(N, N1) :- 
+    num(N),
+    !, 
+    atom_string(N, N1).
 
-check_value(S, S) :- stringa(S), !.
+check_value(S, S) :-
+    stringa(S),
+    !.
+    % atom_string(S, S1).
 
 check_value(V, X) :- parse_supp(V, X).
 
@@ -153,7 +172,7 @@ trim(String, Trim) :-
     reverse(Tsx, Tsxm),
     trim_sx(Tsxm, Tdxm),
     reverse(Tdxm, Tdx),
-    atom_chars(Trim, Tdx).
+    string_chars(Trim, Tdx).
 
 trim_sx([' ' | Tail], T) :-
     trim_sx(Tail, T).
@@ -166,7 +185,7 @@ trim_sx([H | Tail], T) :-
 %%% spezza_pair/3
 % Il predicato è vero quando il primo argomento è la coppia formata dal secondo e dal terzo argomento con un ':' nel mezzo (es. "a" : 3)
 
-spezza_pair(Coppia, St, Vt) :- 
+spezza_pair(Coppia, Ss, Vt) :- 
     atom_chars(Coppia, Chars),
     spezza_pair_sup(Chars, V_chars),
     append(S_chars_dp, V_chars, Chars),
@@ -174,7 +193,9 @@ spezza_pair(Coppia, St, Vt) :-
     atom_chars(S_dp, S_chars_dp),
     atom_concat(S, ':', S_dp),
     trim(S, St),
-    trim(V, Vt).
+    trim(V, Vt),
+    toglivirgolette(St, Ss).    %%sperimentale  %% funge per ora
+    % toglivirgolette(Vt, Vs).    %%sperimentale
 
 spezza_pair_sup([':' | Tail], Tail) :-!.
 
@@ -192,12 +213,26 @@ rimuovi_newline(String, Riga) :-
 concatena_lista([], X, X).
 
 concatena_lista([H | Tail], Precedente, String) :-
-    atom_concat(Precedente, H, Successiva),
+    string_concat(Precedente, H, Successiva),  %%modificato atom_concat in string_concat
     concatena_lista(Tail, Successiva, String).
 
 %%% incapsula_tonde/3
 % Il predicato è vero quando il terzo argomento è una parentesi contentente i primi 2 argomenti separati da una virgola
 incapsula_tonde(S, V, (S, V)).
+
+% incapsula_tonde(S, V, Capsula) :-
+%     atom_concat('(', S, C1),
+%     atom_concat(C1, ', ', C2),
+%     atom_concat(C2, V, C3),
+%     atom_concat(C3, ')', Capsula).
+
+
+%%supporto a caso WIP
+
+supporto_value(V, X) :-
+    atom_string(V1, V),
+    stringa(V1), !, 
+    toglivirgolette(Vt, Vs).
 
 
 %%% Funziona, ma mi da troppe opzioni e va ottimizzato
@@ -216,21 +251,21 @@ spezza_members([], Buffer, Precedente, Finale) :-
 spezza_members([',' | Tail], Buffer, Precedente, Finale) :-
     trim(Buffer, B),
     append(Precedente, [B], Successiva),
-    spezza_members(Tail, "", Successiva, Finale), !.
+    spezza_members(Tail, "", Successiva, Finale).
 
 %% caso della graffa aperta
 spezza_members(['{' | Tail], Buffer, Precedente, Finale) :-
     atom_concat(Buffer, '{', Buffer_con_graffa),
     spezza_alla_graffa(Tail, Sottoggetto, Coda),
     atom_concat(Buffer_con_graffa, Sottoggetto, Buffer_con_so),
-    spezza_members(Coda, Buffer_con_so, Precedente, Finale), !.
+    spezza_members(Coda, Buffer_con_so, Precedente, Finale).
 
 %% caso della quadra aperta
 spezza_members(['[' | Tail], Buffer, Precedente, Finale) :-
     atom_concat(Buffer, '[', Buffer_con_quadra),
     spezza_alla_quadra(Tail, Sottoggetto, Coda),
     atom_concat(Buffer_con_quadra, Sottoggetto, Buffer_con_array),
-    spezza_members(Coda, Buffer_con_array, Precedente, Finale), !.
+    spezza_members(Coda, Buffer_con_array, Precedente, Finale).
 
 %% caso generale
 spezza_members([H | Tail], Buffer, Precedente, Finale) :-
@@ -252,16 +287,16 @@ spezza_sottoggetto(Tail, 0, Tail):- !.
 
 spezza_sottoggetto(['{' | Tail], Contatore, Lista_Tail) :-
     Count is Contatore + 1,
-    spezza_sottoggetto(Tail, Count, Lista_Tail), !.
+    spezza_sottoggetto(Tail, Count, Lista_Tail).
     
 spezza_sottoggetto(['}' | Tail], Contatore, Lista_Tail) :-
     Count is Contatore - 1,
-    spezza_sottoggetto(Tail, Count, Lista_Tail), !.
+    spezza_sottoggetto(Tail, Count, Lista_Tail).
 
-spezza_sottoggetto([_H | Tail], Contatore,  Lista_Tail) :-
-    % not(H = '{'),
-    % not(H = '}'),
-    spezza_sottoggetto(Tail, Contatore, Lista_Tail), !.
+spezza_sottoggetto([H | Tail], Contatore,  Lista_Tail) :-
+    not(H = '{'),
+    not(H = '}'),
+    spezza_sottoggetto(Tail, Contatore, Lista_Tail).
 
 %%% spezza_alla_quadra/3
 % il predicato è vero quando Sottoggetto è il sottoarray estratto dalla lista di chars Chars e Chars_Coda sono i chars riamnenti
@@ -277,18 +312,46 @@ spezza_sottoarray(Tail, 0, Tail):- !.
 
 spezza_sottoarray(['[' | Tail], Contatore, Lista_Tail) :-
     Count is Contatore + 1,
-    spezza_sottoarray(Tail, Count, Lista_Tail), !.
+    spezza_sottoarray(Tail, Count, Lista_Tail).
     
 spezza_sottoarray([']' | Tail], Contatore, Lista_Tail) :-
     Count is Contatore - 1,
-    spezza_sottoarray(Tail, Count, Lista_Tail), !.
+    spezza_sottoarray(Tail, Count, Lista_Tail).
 
-spezza_sottoarray([_H | Tail], Contatore,  Lista_Tail) :-
-    % not(H = '['),
-    % not(H = ']'),
-    spezza_sottoarray(Tail, Contatore, Lista_Tail), !.
+spezza_sottoarray([H | Tail], Contatore,  Lista_Tail) :-
+    not(H = '['),
+    not(H = ']'),
+    spezza_sottoarray(Tail, Contatore, Lista_Tail).
 
 
+<<<<<<< HEAD
+<<<<<<< HEAD
+<<<<<<< HEAD
+%%%%%   Funge
+scrivi_su_file(Filename, Atom) :-
+    open(Filename, write, In),
+    write(In, Atom),
+    close(In).
+
+%%%% Funge
+leggi_da_file(Filename, Riga):-
+    open(Filename, read, Str),
+    read_file(Str, Lines),
+    concatena_lista(Lines, "", Riga),
+    close(Str).
+
+spezza_sottoarray([H | Tail], Contatore,  Lista_Tail) :-
+    not(H = '['),
+    not(H = ']'),
+    spezza_sottoarray(Tail, Contatore, Lista_Tail).
+>>>>>>> parent of 03a1712 (Update pastrugno.pl)
+
+read_file(Stream,[]) :-
+    at_end_of_stream(Stream).
+
+read_file(Stream,[X|L]) :-
+    read_line_to_string(Stream,X),
+    read_file(Stream,L).
 
 %%%%%COSE UTILI
 % {"type": "menu", "value": "File", "items": [{"value": "New", "action": "CreateNewDoc"}, {"value": "Open", "action": "OpenDoc"}, {"value": "Close", "action": "CloseDoc"}]}
