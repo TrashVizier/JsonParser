@@ -112,6 +112,7 @@ togligraffe(I, I_senza_graffe) :-
 
 
 
+
 %%% togliquadre/2
 togliquadre(I, I_senza_quadre) :- 
     string_concat('[', I_sx, I),
@@ -320,6 +321,9 @@ spezza_sottoarray([']' | Tail], Contatore, Lista_Tail) :-
     Count is Contatore - 1,
     spezza_sottoarray(Tail, Count, Lista_Tail).
 <<<<<<< HEAD
+<<<<<<< HEAD
+=======
+>>>>>>> parent of 03a1712 (Update pastrugno.pl)
 
 spezza_sottoarray([H | Tail], Contatore,  Lista_Tail) :-
     not(H = '['),
@@ -327,6 +331,7 @@ spezza_sottoarray([H | Tail], Contatore,  Lista_Tail) :-
     spezza_sottoarray(Tail, Contatore, Lista_Tail).
 
 
+<<<<<<< HEAD
 %%%%%   Funge
 scrivi_su_file(Filename, Atom) :-
     open(Filename, write, In),
@@ -353,6 +358,8 @@ read_file(Stream,[]) :-
 read_file(Stream,[X|L]) :-
     read_line_to_string(Stream,X),
     read_file(Stream,L).
+=======
+>>>>>>> parent of 03a1712 (Update pastrugno.pl)
 
 %%%%%COSE UTILI
 % {"type": "menu", "value": "File", "items": [{"value": "New", "action": "CreateNewDoc"}, {"value": "Open", "action": "OpenDoc"}, {"value": "Close", "action": "CloseDoc"}]}
