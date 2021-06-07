@@ -39,6 +39,8 @@ object(Input) :-
     member_breaker(I_senza_graffe, Lista),
     members(Lista).
 
+
+
 %%% members/1
 % il predicato è vero quando Input è un membro
 members([]).
@@ -70,11 +72,13 @@ elements([H | Tail]) :-
     value(Ht),
     elements(Tail).
 
+
 %%% value/1 
 value(I) :- num(I), !.
 value(I) :- stringa(I), !.
 value(I) :- object(I), !.
 value(I) :- array(I), !.
+
 
 %%% stringa/1
 % Il predicato è vero se S è una stringa 
@@ -105,6 +109,7 @@ num(Input) :-
 togligraffe(I, I_senza_graffe) :- 
     string_concat('{', I_sx, I),
     string_concat(I_senza_graffe, '}', I_sx).
+
 
 %%% togliquadre/2
 togliquadre(I, I_senza_quadre) :- 
@@ -247,21 +252,21 @@ spezza_members([], Buffer, Precedente, Finale) :-
 spezza_members([',' | Tail], Buffer, Precedente, Finale) :-
     trim(Buffer, B),
     append(Precedente, [B], Successiva),
-    spezza_members(Tail, "", Successiva, Finale), !.
+    spezza_members(Tail, "", Successiva, Finale).
 
 %% caso della graffa aperta
 spezza_members(['{' | Tail], Buffer, Precedente, Finale) :-
     atom_concat(Buffer, '{', Buffer_con_graffa),
     spezza_alla_graffa(Tail, Sottoggetto, Coda),
     atom_concat(Buffer_con_graffa, Sottoggetto, Buffer_con_so),
-    spezza_members(Coda, Buffer_con_so, Precedente, Finale), !.
+    spezza_members(Coda, Buffer_con_so, Precedente, Finale).
 
 %% caso della quadra aperta
 spezza_members(['[' | Tail], Buffer, Precedente, Finale) :-
     atom_concat(Buffer, '[', Buffer_con_quadra),
     spezza_alla_quadra(Tail, Sottoggetto, Coda),
     atom_concat(Buffer_con_quadra, Sottoggetto, Buffer_con_array),
-    spezza_members(Coda, Buffer_con_array, Precedente, Finale), !.
+    spezza_members(Coda, Buffer_con_array, Precedente, Finale).
 
 %% caso generale
 spezza_members([H | Tail], Buffer, Precedente, Finale) :-
@@ -283,16 +288,16 @@ spezza_sottoggetto(Tail, 0, Tail):- !.
 
 spezza_sottoggetto(['{' | Tail], Contatore, Lista_Tail) :-
     Count is Contatore + 1,
-    spezza_sottoggetto(Tail, Count, Lista_Tail), !.
+    spezza_sottoggetto(Tail, Count, Lista_Tail).
     
 spezza_sottoggetto(['}' | Tail], Contatore, Lista_Tail) :-
     Count is Contatore - 1,
-    spezza_sottoggetto(Tail, Count, Lista_Tail), !.
+    spezza_sottoggetto(Tail, Count, Lista_Tail).
 
-spezza_sottoggetto([_H | Tail], Contatore,  Lista_Tail) :-
-    % not(H = '{'),
-    % not(H = '}'),
-    spezza_sottoggetto(Tail, Contatore, Lista_Tail), !.
+spezza_sottoggetto([H | Tail], Contatore,  Lista_Tail) :-
+    not(H = '{'),
+    not(H = '}'),
+    spezza_sottoggetto(Tail, Contatore, Lista_Tail).
 
 %%% spezza_alla_quadra/3
 % il predicato è vero quando Sottoggetto è il sottoarray estratto dalla lista di chars Chars e Chars_Coda sono i chars riamnenti
@@ -308,16 +313,16 @@ spezza_sottoarray(Tail, 0, Tail):- !.
 
 spezza_sottoarray(['[' | Tail], Contatore, Lista_Tail) :-
     Count is Contatore + 1,
-    spezza_sottoarray(Tail, Count, Lista_Tail), !.
+    spezza_sottoarray(Tail, Count, Lista_Tail).
     
 spezza_sottoarray([']' | Tail], Contatore, Lista_Tail) :-
     Count is Contatore - 1,
-    spezza_sottoarray(Tail, Count, Lista_Tail), !.
+    spezza_sottoarray(Tail, Count, Lista_Tail).
 
-spezza_sottoarray([_H | Tail], Contatore,  Lista_Tail) :-
-    % not(H = '['),
-    % not(H = ']'),
-    spezza_sottoarray(Tail, Contatore, Lista_Tail), !.
+spezza_sottoarray([H | Tail], Contatore,  Lista_Tail) :-
+    not(H = '['),
+    not(H = ']'),
+    spezza_sottoarray(Tail, Contatore, Lista_Tail).
 
 
 %%%%%   Funge
