@@ -193,13 +193,18 @@ rimuovi_newline(String, Riga) :-
 concatena_lista([], X, X).
 
 concatena_lista([H | Tail], Precedente, String) :-
-    atom_concat(Precedente, H, Successiva),
+    concat(Precedente, H, Successiva),  %%modificato atom_concat in concat
     concatena_lista(Tail, Successiva, String).
 
 %%% incapsula_tonde/3
 % Il predicato è vero quando il terzo argomento è una parentesi contentente i primi 2 argomenti separati da una virgola
 incapsula_tonde(S, V, (S, V)).
 
+% incapsula_tonde(S, V, Capsula) :-
+%     atom_concat('(', S, C1),
+%     atom_concat(C1, ', ', C2),
+%     atom_concat(C2, V, C3),
+%     atom_concat(C3, ')', Capsula).
 
 %%% Funziona, ma mi da troppe opzioni e va ottimizzato
 %%% member_breaker/2
@@ -290,6 +295,25 @@ spezza_sottoarray([_H | Tail], Contatore,  Lista_Tail) :-
     spezza_sottoarray(Tail, Contatore, Lista_Tail), !.
 
 
+%%%%%   Funge
+scrivi_su_file(Filename, Atom) :-
+    open(Filename, write, In),
+    write(In, Atom),
+    close(In).
+
+%%%% Funge
+leggi_da_file(Filename, Riga):-
+    open(Filename, read, Str),
+    read_file(Str, Lines),
+    concatena_lista(Lines, "", Riga),
+    close(Str).
+
+read_file(Stream,[]) :-
+    at_end_of_stream(Stream).
+
+read_file(Stream,[X|L]) :-
+    read_line_to_string(Stream,X),
+    read_file(Stream,L).
 
 %%%%%COSE UTILI
 % {"type": "menu", "value": "File", "items": [{"value": "New", "action": "CreateNewDoc"}, {"value": "Open", "action": "OpenDoc"}, {"value": "Close", "action": "CloseDoc"}]}
