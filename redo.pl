@@ -290,10 +290,10 @@ json_get_member_position([_ | Xs], Y, Result) :-
     json_get_member_position(Xs, Z, Result).
 
 
-%%% json_load(FileName, JSON).
+%%% json_read(FileName, JSON).
 %% -Loads a json file and returns its equivalent JSON_Object form
 %% -Quite self explanatory...
-json_load(Filename, JSON) :-
+json_read(Filename, JSON) :-
     open(Filename, read, In),
     read_stream_to_codes(In, X),
     close(In),
