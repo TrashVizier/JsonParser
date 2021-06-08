@@ -1,226 +1,224 @@
-%%%% SONO ARRIVATO A JSON_print
-
+%%%% Funziona tutto
 
 %%%% -*- Mode: Prolog -*-
 %%%%  json-parsing.pl
 
-%%% json_parse(JSONString, Object)
-%% -Parses a given JSONString by following its recursive nature
-%%  (e.g. split an object into members, members into pairs and so on) in
-%%  order to produce a Prolog friendly list-like form (from now
-%%  on 'JSON_Object').
-%% -The main idea is to consume the characters one-by-one, starting from
-%%  the left side until either an error is found or the string is
-%%  correctly parsed. In order to do so, almost all of the predicates
-%%  have this form: predicate_name(InputCharlist, OutputCharlist,
-%%  InputObject, OutputObject). This is done in order to improve the
-%%  re-usability of the code.
+%%% json_parse/2
+% Il predicato è vero quando JSONString è un atomo che può essere parsato in un json Object     %% da riscrivere meglio come commento 
 
 %% If JSONString is an object...
 json_parse(JSONString, Object) :-
     string_chars(JSONString, JSONChars),
-    remove_whitespaces_newlines_tabs(JSONChars, JSONChars1),        %% trimma a sx
-    json_object(JSONChars1, JSONChars2, [], Object),
-    remove_whitespaces_newlines_tabs(JSONChars2, JSONChars3),
-    %% Checks if empty to make sure there's nothing nasty at the end
+    pulisci_stringa(JSONChars, JSONChars_pulita),
+    json_object(JSONChars_pulita, JSONChars2, [], Object),
+    pulisci_stringa(JSONChars2, JSONChars3),
     is_empty(JSONChars3),
     !.
 %% If JSONString is an array...
 json_parse(JSONString, Object) :-
     string_codes(JSONString, JSONChars),
-    remove_whitespaces_newlines_tabs(JSONChars, JSONChars1),
-    json_array(JSONChars1, JSONChars2, [], Object),
-    remove_whitespaces_newlines_tabs(JSONChars2, JSONChars3),
+    pulisci_stringa(JSONChars, JSONChars_pulita),
+    json_array(JSONChars_pulita, JSONChars2, [], Object),
+    pulisci_stringa(JSONChars2, JSONChars3),
     %% Checks if empty to make sure there's nothing nasty at the end
     is_empty(JSONChars3),
     !.
 
 %%% json_object(JSONSChars, JSONChars2, ObjectIn,json_obj(OutObject))
-%% If there's an empty object {}...
-json_object(JSONCharsIn, JSONCharsOut, ObjectIn, json_obj(ObjectOut)) :-    %% caso oggetto vuoto {}
-    first_char("{", JSONCharsIn, JSONChars1),
-    remove_whitespaces_newlines_tabs(JSONChars1, JSONChars2),
-    first_char("}", JSONChars2, JSONCharsOut),
-    !,
-    ObjectIn = ObjectOut.
 
-json_object(JSONCharsIn, JSONCharsOut, ObjectIn, json_obj(ObjectOut)) :-    %% caso di un oggetto "pieno"
-    first_char("{", JSONCharsIn, JSONChars1),                                       %% tolgo la prima graffa
+%% caso oggetto vuoto {}
+json_object(Input, Restante, Precedente, json_obj(Precedente)) :-    
+    first_char("{", Input, Input_senza_graffa),
+    pulisci_stringa(Input_senza_graffa, Input_senza_graffa_pulito),
+    first_char("}", Input_senza_graffa_pulito, Restante),
+    !.
+ %% caso di un oggetto "pieno" { bla bla bla}
+json_object(Input, Resto, Precedente, json_obj(Successivo)) :-   
+    first_char("{", Input, Input_senza_graffa),
     !,
-    remove_whitespaces_newlines_tabs(JSONChars1, JSONChars2),                       %% trim eventuale
-    json_members(JSONChars2, JSONChars3, ObjectIn, ObjectOut),                      %% chiamo sui membri
-    remove_whitespaces_newlines_tabs(JSONChars3, JSONChars4),
-    first_char("}", JSONChars4, JSONCharsOut).
+    pulisci_stringa(Input_senza_graffa, Input_senza_graffa_pulito),
+    json_members(Input_senza_graffa_pulito, Resto_members, Precedente, Successivo),
+    pulisci_stringa(Resto_members, Resto_members_pulito),
+    first_char("}", Resto_members_pulito, Resto).
 
 %%%  json_array(JSONSChars, JSONChars2, ObjectIn,json_array(ObjectOut))
 %% If there's an empty array []...
-json_array(JSONCharsIn, JSONCharsOut, ObjectIn, json_array(ObjectIn)) :-
-    first_char("[", JSONCharsIn, JSONChars1),
-    remove_whitespaces_newlines_tabs(JSONChars1, JSONChars2),
-    first_char("]", JSONChars2, JSONCharsOut),
+json_array(Input, Resto, Precedente, json_array(Precedente)) :-
+    first_char("[", Input, Input_senza_quadra),
+    pulisci_stringa(Input_senza_quadra, Input_senza_quadra_pulito),
+    first_char("]", Input_senza_quadra_pulito, Resto),
     !.
-json_array(JSONCharsIn, JSONCharsOut, ObjectIn, json_array(ObjectOut)) :-
-    first_char("[", JSONCharsIn, JSONChars1),
+json_array(Input, Resto, Precedente, json_array(Successivo)) :-
+    first_char("[", Input, Input_senza_quadra),
     !,
-    remove_whitespaces_newlines_tabs(JSONChars1, JSONChars2),
-    json_elements(JSONChars2, JSONChars3, ObjectIn, ObjectOut),
-    remove_whitespaces_newlines_tabs(JSONChars3, JSONChars4),
-    first_char("]", JSONChars4, JSONCharsOut).
+    pulisci_stringa(Input_senza_quadra, Input_senza_quadra_pulito),
+    json_elements(Input_senza_quadra_pulito, Resto_elements, Precedente, Successivo),
+    pulisci_stringa(Resto_elements, Resto_elements_pulito),
+    first_char("]", Resto_elements_pulito, Resto).
 
 %%%  json_member(JSONSChars, JSONCharsOut, ObjectIn, ObjectOut)
 %% It is essential to write both json_members and json_elements in this
 %% order, since using the opposite one would result in an error (they
 %% would both unify, which is wrong!). The same idea is used in the rest
 %% of this program with many predicates.
-json_members(JSONCharsIn, JSONCharsOut, ObjectIn, ObjectOut1) :-
-    json_pair(JSONCharsIn, JSONChars2, ObjectIn, ObjectOut),
-    remove_whitespaces_newlines_tabs(JSONChars2, JSONChars3),
-    first_char(",", JSONChars3, JSONChars4),
-    remove_whitespaces_newlines_tabs(JSONChars4, JSONChars5),
-    json_members(JSONChars5, JSONCharsOut, ObjectOut, ObjectOut1),
+json_members(Input, Resto, Precedente, Successivo) :-
+    json_pair(Input, Resto_pair, Precedente, Pair_successivo),
+    pulisci_stringa(Resto_pair, Resto_pair_pulito),
+    first_char(",", Resto_pair_pulito, Resto_senza_virgola),
+    pulisci_stringa(Resto_senza_virgola, Resto_senza_virgola_pulito),
+    json_members(Resto_senza_virgola_pulito, Resto, Pair_successivo, Successivo),
     !.
-json_members(JSONCharsIn, JSONCharsOut, ObjectIn, ObjectOut) :-
-    json_pair(JSONCharsIn, JSONCharsOut, ObjectIn, ObjectOut),
-    !.
-%%% json_elements(JSONCharsIn, JSONCharsOut, ObjectIn, ObjectOut)
-json_elements(JSONCharsIn, JSONCharsOut, ObjectIn, ObjectOut2) :-
-    json_value(JSONCharsIn, JSONChars2, ObjectOut),
-    remove_whitespaces_newlines_tabs(JSONChars2, JSONChars3),
-    first_char(",", JSONChars3, JSONChars4),
-    remove_whitespaces_newlines_tabs(JSONChars4, JSONChars5),
-    !,
-    append(ObjectIn, [ObjectOut], ObjectOut1),
-    json_elements(JSONChars5, JSONCharsOut, ObjectOut1, ObjectOut2).
 
-json_elements(JSONCharsIn, JSONCharsOut, ObjectIn, ObjectOut1) :-
-    json_value(JSONCharsIn, JSONCharsOut, ObjectOut),
-    append(ObjectIn, [ObjectOut], ObjectOut1),
+json_members(Input, Resto, Precedente, Successivo) :-
+    json_pair(Input, Resto, Precedente, Successivo),
+    !.
+
+%%% json_elements(JSONCharsIn, JSONCharsOut, ObjectIn, ObjectOut)
+json_elements(Input, Resto, Precedente, Successivo) :-
+    json_value(Input, Resto_value, Value),
+    pulisci_stringa(Resto_value, Resto_value_pulito),
+    first_char(",", Resto_value_pulito, Resto_con_virgola),
+    pulisci_stringa(Resto_con_virgola, Resto_con_virgola_pulito),
+    !,
+    append(Precedente, [Value], Successivo_value),
+    json_elements(Resto_con_virgola_pulito, Resto, Successivo_value, Successivo).
+
+json_elements(Input, Resto, Precedente, Successivo) :-
+    json_value(Input, Resto, Value),
+    append(Precedente, [Value], Successivo),
     !.
 
 %%% json_pair(JSONCharsIn, JSONCharsOut, ObjectIn, ObjectOut)
-json_pair(JSONCharsIn, JSONCharsOut, ObjectIn, ObjectOut) :-
-    json_string(JSONCharsIn, JSONChars2, Key),
-    remove_whitespaces_newlines_tabs(JSONChars2, JSONChars3),
-    first_char(":", JSONChars3, JSONChars4),
-    remove_whitespaces_newlines_tabs(JSONChars4, JSONChars5),
-    json_value(JSONChars5, JSONCharsOut, Value),
-    append(ObjectIn, [(Key,Value)], ObjectOut).
+json_pair(Input, Resto_value, Precedente, Successivo) :-
+    json_string(Input, Resto_stringa, Key),
+    pulisci_stringa(Resto_stringa, Resto_stringa_pulito),
+    first_char(":", Resto_stringa_pulito, Resto_senza_dp),
+    pulisci_stringa(Resto_senza_dp, Resto_senza_dp_pulito),
+    json_value(Resto_senza_dp_pulito, Resto_value, Value),
+    append(Precedente, [(Key,Value)], Successivo).
 
-%%% json_string(JSONCharsIn, JSONCharsOut, Key)
-json_string(JSONCharsIn, JSONCharsOut, Key) :-
-    first_char("\'", JSONCharsIn, JSONChars2),      %'
+%%% json_string/3
+% il predicato è vero quando dalla lista di char Input può essere estratta la stringa Key e con rimanente la lista di char Resto 
+json_string(Input, Resto, Key) :-
+    first_char("\'", Input, Input_senza_apice),      %'
     !,
-    string_creation_sq(JSONChars2, JSONChars3, Result),  %% Result is the Key of the pair without squotes, and JSONChars3 is the rest (from : on)
-    first_char("\'", JSONChars3, JSONCharsOut),     %'
-    string_chars(Key, Result).
-json_string(JSONCharsIn, JSONCharsOut, Key) :-
-    first_char("\"", JSONCharsIn, JSONChars2),
+    spezza_stringa_apice(Input_senza_apice, Value_char_dp, Key_char),
+    first_char("\'", Value_char_dp, Resto),     %'
+    string_chars(Key, Key_char).
+
+json_string(Input, Resto, Key) :-
+    first_char("\"", Input, Input_senza_apice),
     !,
-    string_creation_dq(JSONChars2, JSONChars3, Result),
-    first_char("\"", JSONChars3, JSONCharsOut),
-    string_chars(Key, Result).
+    spezza_stringa_virgolette(Input_senza_apice, Value_char_dp, Key_char),
+    first_char("\"", Value_char_dp, Resto),
+    string_chars(Key, Key_char).
 
 %%% json_value(JSONCharsIn, JSONCharsOut, Object)
-json_value(JSONCharsIn, JSONCharsOut, Object) :-
-    json_string(JSONCharsIn, JSONCharsOut, Object), % is a string
+json_value(Input, Resto, Output) :-
+    json_string(Input, Resto, Output), % is a string
     !.
-json_value(JSONCharsIn, JSONCharsOut, Object) :-
-    json_nested(JSONCharsIn, JSONCharsOut, Object), % is a JSON
+json_value(Input, Resto, Output) :-
+    json_nested(Input, Resto, Output), % is a JSON
     !.
-json_value(JSONCharsIn, JSONCharsOut, Object) :-
-    json_number(JSONCharsIn, JSONCharsOut, Object), % is a number
+json_value(Input, Resto, Output) :-
+    json_number(Input, Resto, Output), % is a number
     !.
 
 %%% json_number(JSONCharsIn, JSONCharsOut, Object)
 %% If number is float...
-json_number(JSONCharsIn, JSONCharsOut, Object) :-
-    number_creation(JSONCharsIn, Coda, Int),
+json_number(Input, Resto, Num) :-
+    number_creation(Input, Resto, Int),
     is_not_empty(Int),
-    first_char(".", Coda, Coda_senza_punto),
+    first_char(".", Resto, Resto_senza_punto),
     !,
     append(Int, ['.'], Int_con_punto),
-    number_creation(Coda_senza_punto, JSONCharsOut, Decimale),
+    number_creation(Resto_senza_punto, Resto, Decimale),
     is_not_empty(Decimale),
     append(Int_con_punto, Decimale, Float),
-    number_chars(Object, Float).
+    number_chars(Num, Float).
 
 %% if number is int   
-json_number(JSONCharsIn, JSONCharsOut, Object) :-
-    number_creation(JSONCharsIn, JSONCharsOut, Num),
-    is_not_empty(Num),
+json_number(Input, Resto, Num) :-
+    number_creation(Input, Resto, Int),
+    is_not_empty(Int),
     !,
-    number_chars(Object, Num).
+    number_chars(Num, Int).
 
 
 %%% is_not_empty(List)
-is_not_empty(List) :- List \= [], !.
+is_not_empty(Lista) :- Lista \= [], !.
 
 %%% is_empty(List)
 is_empty([]) :- !.
 
 %%% json_nested(JSONCharsIn, JSONCharsOut, Object)
-json_nested(JSONCharsIn, JSONCharsOut, Object) :-
-    json_object(JSONCharsIn, JSONCharsOut, [], Object),
+json_nested(Input, Resto, Output) :-
+    json_object(Input, Resto, [], Output),
     !.
-json_nested(JSONCharsIn, JSONCharsOut, Object) :-
-    json_array(JSONCharsIn, JSONCharsOut, [], Object),
+json_nested(Input, Resto, Output) :-
+    json_array(Input, Resto, [], Output),
     !.
 
 %%% first_char(CharToMatch, JSONCharsIn, JSONCharsOut)                      %%% rimuove il primo carattere dalla lista solo se CharToMatch è il primo della lista
 %% Please note: the following predicates also REMOVES the object
 %% from the actual char list!
-first_char(String_chars, [Char | Xs], Xs):-
+first_char(String_chars, [Char | Tail], Tail):-
     atom_string(Char, String_chars).
 
 %%% number_creation(JSONCharsIn, JSONCharsOut, JSONCharsNumber)
-number_creation([X | Xs], [X | Xs], []) :-
-    not(is_digit(X)),
+number_creation([H | Tail], [H | Tail], []) :-
+    not(cifra(H)),
     !.
-number_creation([X | Xs], Zs, [X | Ys]) :-
-    number_creation(Xs, Zs, Ys).
+number_creation([H | Tail1], X, [H | Tail2]) :-
+    number_creation(Tail1, X, Tail2).
 
-is_digit(0).
-is_digit(1).
-is_digit(2).
-is_digit(3).
-is_digit(4).
-is_digit(5).
-is_digit(6).
-is_digit(7).
-is_digit(8).
-is_digit(9).
+cifra('0').
+cifra('1').
+cifra('2').
+cifra('3').
+cifra('4').
+cifra('5').
+cifra('6').
+cifra('7').
+cifra('8').
+cifra('9').
 
-%%% string_creation_sq(JSONCharsIn, JSONCharsOut, JSONCharsString)      %% "asd' : 123"=> "asd" e "' : 123"
-string_creation_sq(['\"' | _], _, _) :-
+%%% spezza_stringa_apice(JSONCharsIn, JSONCharsOut, JSONCharsString)      %% "asd' : 123"=> "' : 123" e "asd"
+% cerco carattere per carattere il \' , poi quando lo trovo restituisco le 2 parti
+spezza_stringa_apice(['\"' | _], _, _) :-   %se trovo \" ==> fallisco
     !,
     fail.
-string_creation_sq(['\'' | Xs], ['\'' | Xs], []) :- !.
-string_creation_sq([X | Xs], Zs, [X | Ys]) :-
-    string_creation_sq(Xs, Zs, Ys).
 
-%%% string_creation_dq(JSONCharsIn, JSONCharsOut, JSONCharsString)      %% "asd\" : 123"=> "asd" e "\" : 123"
-string_creation_dq(['\'' | _], _, _) :-
+spezza_stringa_apice(['\'' | Tail], ['\'' | Tail], []) :- !.    %Se trovo l'apice, restituisco la parte restante e inizio a riempire la lista a dx con il backtracking       
+
+spezza_stringa_apice([H | Tail1], X, [H | Tail2]) :-
+    spezza_stringa_apice(Tail1, X, Tail2).
+
+%%% spezza_stringa_virgolette(JSONCharsIn, JSONCharsOut, JSONCharsString)
+spezza_stringa_virgolette(['\'' | _], _, _) :-
     !,
     fail.
-string_creation_dq(['\"' | Xs], ['\"' | Xs], []) :- !.
-string_creation_dq([X | Xs], Zs, [X | Ys]) :-
-    string_creation_dq(Xs, Zs, Ys).
+spezza_stringa_virgolette(['\"' | Tail], ['\"' | Tail], []) :- !.
+spezza_stringa_virgolette([H | Tail1], X, [H | Tail2]) :-
+    spezza_stringa_virgolette(Tail1, X, Tail2).
 
 
-%%% remove_whitespaces_newlines_tabs(JSONCharsIn, JSONCharsOut)
-remove_whitespaces_newlines_tabs([],[]) :- !.
-remove_whitespaces_newlines_tabs([X | Xs], Ys) :-
-    is_spazio(X),
+%%% pulisci_stringa(JSONCharsIn, JSONCharsOut)
+pulisci_stringa([],[]) :- !.
+
+pulisci_stringa([Char | Tail], Lista_pulita) :-
+    is_spazio(Char),
     !,
-    remove_whitespaces_newlines_tabs(Xs, Ys).
-remove_whitespaces_newlines_tabs([X | Xs], [X | Xs]) :- !.
+    pulisci_stringa(Tail, Lista_pulita).
+
+pulisci_stringa([H | Tail], [H | Tail]) :- !.
 
 %%% is_spazi(JSONChars)
 is_spazio(' ') :- !.
 is_spazio('\n') :- !.
 is_spazio('\t') :- !.
 
-%%% json_get(JSON_obj, Fields, Result)
+%%% json_access(JSON_obj, Fields, Result)
 %% -Follows a chain of keys (iff JSON_obj at current level is an object)
 %%  or indexes (iff JSON_obj at current level is an array) in order to
 %%  retrieve a certain value.
@@ -228,85 +226,79 @@ is_spazio('\t') :- !.
 %%  and recursively work on that list.
 
 %% Returns an identity if fields is empty
-json_get(X, void, X) :- !.
+json_access(X, void, X) :- !.
 
 %% Fails if Elements is empty
-json_get(_, [], _) :- !, fail.
-
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%ARRIVATO QUA
+json_access(_, [], _) :- !, fail.
 
 
 %% Cannot find anything in an empty object-array!
-json_get(json_obj(), _, _) :- !, fail.
-json_get(json_array(), _, _) :- !, fail.
+json_access(json_obj(), _, _) :- !, fail.
 
-json_get(JSON_obj, [X], Result) :-
-    json_get_elements(JSON_obj, X, Result),
+json_access(json_array(), _, _) :- !, fail.
+
+json_access(JSON_obj, [X], Finale) :-
+    access_element(JSON_obj, X, Finale),
     !.
-json_get(JSON_obj, [X|Xs], Result) :-
-    json_get_elements(JSON_obj, X, Temp),
+
+json_access(JSON_obj, [X|Xs], Finale) :-
+    access_element(JSON_obj, X, Annidato),
     !,
-    json_get(Temp, Xs, Result).
-json_get(JSON_obj, X, Result) :-
-    json_get_elements(JSON_obj, X, Result),
+    json_access(Annidato, Xs, Finale).
+
+json_access(JSON_obj, X, Finale) :-
+    access_element(JSON_obj, X, Finale),
     !.
 
-%%% json_get_elements(JSON_obj, Fields, Result)
+%%% access_element(JSON_obj, Fields, Result)
 % If Object is an object...
-json_get_elements(JSON_obj, Fields, Result) :-
-    json_obj([Y|Ys]) = JSON_obj,
-    !,
-    json_get_member([Y|Ys], Fields, Result).
+access_element(json_obj([Lista_membri]), Chiave, Finale) :-
+    access_member([Lista_membri], Chiave, Finale).
 
 %% If Object is an array...
-json_get_elements(JSON_obj, Index , Result) :-
-    json_array([X|Xs]) = JSON_obj,
-    !,
-    json_get_member_position([X | Xs], Index, Result).
+access_element(json_array([Lista_elementi]), Posizione , Result) :-
+    access_element_position([Lista_elementi], Posizione, Result).
 
-%%% json_get_member(JSON_list, Key, Result)
+%%% access_member(JSON_list, Key, Result)
 %% Searches an element given a Key (Object only!)
-json_get_member([], _, _) :- fail.
-json_get_member([(X,Y)| _], Z, Result) :-
-    string(Z),
-    X = Z,
-    !,
-    Result = Y.
-json_get_member([_| Xs], Z, Result) :-
-    string(Z),
-    json_get_member(Xs, Z, Result).
+access_member([], _, _) :- fail.
 
-%%% json_get_member_position(JSON_list, Position, Result)
+access_member([(K,V) | _], K, V) :-
+    string(K), !.
+
+access_member([_ | Tail], K, V) :-
+    string(K),
+    access_member(Tail, K, V).
+
+%%% access_element_position(JSON_list, Position, Result)
 % Searches an element given an index (Array only!)
-json_get_member_position([],[_], _) :- fail.
-json_get_member_position([X | _], Y, Result) :-
-    number(Y),
-    Y = 0,
-    !,
-    Result = X.
-json_get_member_position([_ | Xs], Y, Result) :-
-    number(Y),
-    Z is Y-1,
-    json_get_member_position(Xs, Z, Result).
+access_element_position([],[_], _) :- fail.
+
+access_element_position([H | _], 0, H).
+
+access_element_position([_ | Tail], Contatore, Risultato) :-
+    number(Contatore),
+    Count is Contatore-1,
+    access_element_position(Tail, Count, Risultato).
 
 
 %%% json_read(FileName, JSON).
 %% -Loads a json file and returns its equivalent JSON_Object form
 %% -Quite self explanatory...
-json_read(Filename, JSON) :-
+json_read(Filename, Parsed) :-
     open(Filename, read, In),
-    read_stream_to_codes(In, X),
+    read_stream_to_codes(In, Ascii),
     close(In),
-    atom_codes(JSONString, X),
-    json_parse(JSONString, JSON).
+    atom_codes(JSONString, Ascii),
+    json_parse(JSONString, Parsed).
 
+%% Arrivato Qua a commentare
 
 %%% json_write(JSON, Filename).
 %% -Writes a JSON_Object into a .json file (in JSON-compatible syntax!)
 %% -The main idea is to retrieve the list inside the JSON_obj and
 %%  recursively work on that list.
-%%  (Same as json_get, the only difference being that it returns a string
+%%  (Same as json_access, the only difference being that it returns a string
 %%  representing the list instead of a single element)
 json_write(JSON, Filename) :-
     open(Filename, write, Out),
