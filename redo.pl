@@ -1,4 +1,5 @@
-%%%% SONO ARRIVATO A JSON_ARRAY
+%%%% SONO ARRIVATO A JSON_print
+
 
 %%%% -*- Mode: Prolog -*-
 %%%%  json-parsing.pl
@@ -314,43 +315,35 @@ json_write(JSON, Filename) :-
     close(Out).
 
 %%% json_print(JSON, JSONString)
-json_print(JSON, JSONString) :-
-    JSON = json_obj([]),
-    !,
-    JSONString = "{}".
-json_print(JSON, JSONString) :-
-    json_obj([Y | Ys]) = JSON,
-    !,
-    concat("", "{", JSONString1),
-    json_print_object([Y | Ys], "", JSONString2),
-    concat(JSONString1, JSONString2, JSONString3),
-    concat(JSONString3, "}", JSONString).
+json_print(json_obj([]), "{}") :- !.
 
-json_print(JSON, JSONString) :-
-    JSON = json_array([]),
+json_print(json_obj([Y | Ys]), JSONString) :-
     !,
-    JSONString = "[]".
-json_print(JSON, JSONString) :-
-    json_array([Y | Ys]) = JSON,
+    json_print_object([Y | Ys], "", Membri),
+    concat("{", Membri, Membri_con_graffa),
+    concat(Membri_con_graffa, "}", JSONString).
+
+json_print(json_array([]), "[]") :- !.
+
+json_print(json_array([Y | Ys]), JSONString) :-
     !,
-    concat("", "[", JSONString1),
-    json_print_array([Y | Ys], "", JSONString2),
-    concat(JSONString1, JSONString2, JSONString3),
-    concat(JSONString3, "]", JSONString).
+    json_print_array([Y | Ys], "", Elementi),
+    concat("[", Elementi, Elementi_con_graffa),
+    concat(Elementi_con_graffa, "]", JSONString).
 
 %%% json_print_object(JSONList, JSONString, Result)
-json_print_object([], JSONString, Result) :-
+json_print_object([], JSONString, Result) :-                %%%  Non credo serva perchè entra sempre una lista
     !,
-    string_concat(Temp, ",", JSONString),
-    Result = Temp.
-json_print_object([(X,Y)| Xs], JSONString, Result) :-
-    json_print_element(X, JSONString1),
-    string_concat(JSONString, JSONString1, JSONString2),
-    string_concat(JSONString2, ":", JSONString3),
-    json_print_element(Y, JSONString4),
-    string_concat(JSONString3, JSONString4, JSONString5),
-    string_concat(JSONString5, ",", JSONString6),
-    json_print_object(Xs, JSONString6, Result).
+    string_concat(Result, ", ", JSONString).
+
+json_print_object([(X,Y)| Tail], JSONString, Result) :-
+    json_print_stringa(X, Key),
+    string_concat(JSONString, Key, Precedente_Key),
+    string_concat(Precedente_Key, " : ", Precedente_Key_dp),
+    json_print_element(Y, Value),
+    string_concat(Precedente_Key_dp, Value, Precedente_KV),
+    string_concat(Precedente_KV, ", ", Precedente_KV_v),
+    json_print_object(Tail, Precedente_KV_v, Result).
 
 %%% json_print_array(JSONList, JSONString, Result)
 json_print_array([], JSONString, Result) :-
@@ -364,20 +357,20 @@ json_print_array([X| Xs], JSONString, Result) :-
     json_print_array(Xs, JSONString3, Result).
 
 %%% json_print_element(Element, Result)
-json_print_element(X, Result) :-
-    number(X),
-    !,
-    Result = X.
+json_print_element(X, X) :-
+    number(X), !.
 json_print_element(X, Result) :-
     json_print(X, Result),
     !.
+
 json_print_element(X, Result) :-
+    json_print_stringa(X, Result), !.
+
+json_print_stringa(X, Result) :-
     string(X),
     !,
-    string_concat("", "\"", JSONString1),
-    string_concat(JSONString1, X, JSONString2),
-    string_concat(JSONString2, "\"", JSONString3),
-    Result = JSONString3.
+    string_concat("\"", X, X_virogoletta),
+    string_concat(X_virogoletta, "\"", Result).
 
 %%%%  end of file -- json-parsing.pl
 
