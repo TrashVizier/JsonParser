@@ -294,13 +294,13 @@ json_read(Filename, Parsed) :-
 
 %% Arrivato Qua a commentare
 
-%%% json_write(JSON, Filename).
+%%% json_dump(JSON, Filename).
 %% -Writes a JSON_Object into a .json file (in JSON-compatible syntax!)
 %% -The main idea is to retrieve the list inside the JSON_obj and
 %%  recursively work on that list.
 %%  (Same as json_access, the only difference being that it returns a string
 %%  representing the list instead of a single element)
-json_write(JSON, Filename) :-
+json_dump(JSON, Filename) :-
     open(Filename, write, Out),
     json_print(JSON, JSONString),
     write(Out, JSONString),
