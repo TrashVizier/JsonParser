@@ -64,16 +64,15 @@
 
 ; input  ==> (coerce "1, 2, 3]" 'list) NIL
 ; output ==> ((1 2 3) NIL)
-(defun parse-elements (json precedente)                                         ; MODIFICABILE?
-  (let ((result (parse-value json)))
-    (fine-array result precedente)))
+
+(defun parse-elements (input precedente)
+  (fine-array (parse-value input) precedente))
 
 ;;; parse-members (json obj)
 ; input  ==> (coerce "\"asd\" : 5, \"pippo\" : \"franco\"}" 'list) NIL
 ; output ==> ((("asd" 5) ("pippo" "franco")) NIL)
-(defun parse-members (input restante)
-  (let ((result-pair (parse-pair input)))
-  (fine-object result-pair restante)))
+(defun parse-members (input precedente)
+  (fine-object (parse-pair input)  precedente))
 
 
 ;;; parse-pair (json obj)
@@ -247,7 +246,7 @@
       (append (list parse-successivo) (list (tronca-primo lista-succesiva))))
      ((char= (first lista-succesiva) '#\,) 
       (parse-elements (tronca-primo lista-succesiva) parse-successivo))  
-     (T (error "errore fine array")))))
+     (T (error "errore fine-array")))))
 
 ;;; fine-object (json obj)
 ;; Determines whether an object has ended or a new
@@ -279,7 +278,7 @@
 
 ;; ARRIVATO QUA
 
-;;; json_get(json, &rest fields)
+;;; json-access(json, &rest fields)
 ;; -Follows a chain of keys (iff JSON_obj at current level 
 ;;  is an object) or indexes (iff JSON_obj at current level 
 ;;  is an array) in order to retrieve a certain value.
@@ -287,33 +286,35 @@
 ;; -Two different predicates are used since the keyword 
 ;;  &rest had a few issues with recursive calls.
 
-(defun json-get (json &rest fields)
+(defun json-access (json &rest fields)
   (if (null fields)        ; returns an identity if fields is empty
       json
-  (get-supporto json fields)))
+  (access-supp json fields)))
 
-(defun get-supporto (json fields)
+
+; input e output analoghi a json-access
+(defun access-supp (json fields)
   (cond
    ;; base case: only 1 field
    ((and (eq (list-length fields) 1)
          (listp json)
          (stringp (first fields))
-         (eq (first JSON) 'json-obj)) 
+         (eq (first JSON) 'json-obj)) ; caso oggetto
     (json-search-by-key (rest json) (first fields)))
    ((and (eq (list-length fields) 1) 
          (listp json)
          (numberp (first fields))
          (>= (first fields) 0)
-         (eq (first JSON) 'json-array)) 
+         (eq (first JSON) 'json-array)) ;caso array
     (json-search-by-index (rest json) (first fields)))
    ;; inductive case: more than 1 field.
    ;; retrieve the value which has key/index equal
-   ;; to first field, then call get-supporto again
+   ;; to first field, then call access-supp again
    ((and (> (list-length fields) 1) 
          (listp json)
          (stringp (first fields))
-         (eq (first JSON) 'json-obj)) 
-    (get-supporto
+         (eq (first JSON) 'json-obj)) ; caso oggetto
+    (access-supp
      (json-search-by-key (rest json) (first fields))
      (rest fields)
      ))
@@ -321,33 +322,37 @@
          (listp json)
          (numberp (first fields))
          (>= (first fields) 0)
-         (eq (first JSON) 'json-array)) 
-    (get-supporto
+         (eq (first JSON) 'json-array)) ; caso array
+    (access-supp
      (json-search-by-index (rest json) (first fields))
      (rest fields)
      ))
-   (T (error "Syntax-error"))))
+   (T (error "errore access-supp"))))
 
 ;;; json-search-by-key (json key)
-(defun json-search-by-key (json key)
+; input  ==> (("nome" "Arthur") ("cognome" "Dent")) "nome"
+; output ==> "Arthur"
+(defun json-search-by-key (input string)
   (cond
-   ((NULL json) (error "Key-not-found"))
-   ((equal (first (first json)) key) (first (rest (first json))))
-   (T (json-search-by-key (rest json) key))
+   ((NULL input) (error "errore json-search-by-key"))
+   ((equal (first (first input)) string) (first (rest (first input))))
+   (T (json-search-by-key (rest input) string))
    ))
 
 ;;; json-search-by-index (json index)
-(defun json-search-by-index (json index)
+; input  ==> '(1 2 3) 2
+; output ==> 3
+(defun json-search-by-index (input posizione)
   (cond
-   ((NULL json) (error "Index-not-found"))
-   ((eq index 0) (first json))
-   (T (json-search-by-index (rest json) (1- index)))
+   ((NULL input) (error "errore json-search-by-index"))
+   ((eq posizione 0) (first input))
+   (T (json-search-by-index (rest input) (- posizione 1)))
    ))
 
-;;; json-load(filename)
+;;; json-read(filename)
 ;; -Loads a json file and returns its equivalent list-form
 ;; -Quite self explanatory...
-(defun json-load (filename)
+(defun json-read (filename)
   (with-open-file (stream filename 
                           :direction :input 
                           :if-does-not-exist :error)
@@ -355,10 +360,10 @@
        (let ((contenuto-file (read-sequence stringa-allocata stream)))  ; rimpiazzo i caratteri nella stringa con quelli dello stream
          (json-parse (subseq stringa-allocata 0 contenuto-file))))))
 
-;;; json-write(json filename).
+;;; json-dump(json filename).
 ;; -Loads a json file and returns its equivalent list-form
 ;; -Quite self explanatory...
-(defun json-write (JSON filename)
+(defun json-dump (JSON filename)
   (with-open-file (stream filename 
                           :direction :output 
                           :if-exists :supersede
@@ -372,24 +377,26 @@
 ;; it will be [ something ].
 (defun json-to-string (JSON)
   (cond
-   ((eq (first JSON) 'json-obj) 
+   ((eq (first JSON) 'json-obj) ;caso oggetto
     (concatenate 'string 
                  "{" 
-                 (tronca-ultimo-comma
+                 (cancella-virgola-finale
                   (json-print-obj (rest JSON))) 
                  "}"
                  ))
-   ((eq (first JSON) 'json-array) 
+   ((eq (first JSON) 'json-array) ;caso array
     (concatenate 'string 
                  "[" 
-                 (tronca-ultimo-comma
+                 (cancella-virgola-finale
                   (json-print-array (rest JSON)))
                  "]"
                  ))
-   (T (error "Syntax-error"))))
+   (T (error "errore json-to-string"))))
 
 ;;; json-print-obj (json)
 ;; Prints the first pair and then the others.
+; input  ==> '(("nome" "Arthur") ("cognome" "Dent"))
+; output ==> "\"nome\":\"Arthur\",\"cognome\":\"Dent\","
 (defun json-print-obj (JSON)
   (cond
    ((NULL JSON) "")
@@ -400,39 +407,43 @@
                  ))))
 
 ;;; json-print-pair (json)
+; input  ==> '("nome" "Arthur")
+; output ==> "\"nome\" : \"Arthur\", "
 (defun json-print-pair (JSON)
   (concatenate 'string "\""
                (first JSON)
-               "\"" ":" 
+               "\"" " : " 
                (json-print-value (first (rest JSON)))
-               ","
+               ", "
                ))
 
 ;;; json-print-value (value)
 ;; Note: only the value to print is passed
 (defun json-print-value (value)
   (cond
-   ((numberp value) 
+   ((numberp value) ; caso numero
     (write-to-string value))
-   ((stringp value) 
+   ((stringp value) ; caso stringa
     (concatenate 'string "\"" value "\""))
-   (T (json-to-string value))))
+   (T (json-to-string value)))) ; caso annidato
 
 ;;; json-print-array (json)
 ;; Prints the first element and then the others.
+; input  ==> '(1 2 3)
+; output ==> "1, 2, 3, "
 (defun json-print-array (JSON)
   (cond
    ((NULL JSON) "")
    (T (concatenate 'string 
       (json-print-value (first JSON))
-       ","
+       ", "
       (json-print-array (rest JSON))
     ))))
 
-;;; tronca-ultimo-comma (json)
-(defun tronca-ultimo-comma (JSON)
+;;; cancella-virgola-finale (json)
+(defun cancella-virgola-finale (JSON)
   (cond
     ((string= "" JSON) JSON)
-    (T (subseq JSON 0 (- (length JSON) 1)))))
+    (T (subseq JSON 0 (- (length JSON) 2)))))
 
 ;;;; end of file -- json-parsing.lisp
