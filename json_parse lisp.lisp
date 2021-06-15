@@ -1,8 +1,6 @@
 ;;;; -*- Mode: Lisp -*-
 ;;;; json-parsing.lisp
 
-;;; PRENDI DI ESEMPIO fine-array
-
 ;;; json-parse (json)
 ;; -Parses a given json by following its recursive nature
 ;;  (e.g. split an object into members, members into pairs
@@ -30,7 +28,7 @@
 ; input  ==> (coerce "1, 2, 3]" 'list)
 ; output ==> (JSON-ARRAY 1 2 3) 
 (defun parse-array (json)
-(let ((elements (funcall 'pulisci-lista json)))
+(let ((elements (pulisci-lista json)))
   (cond
    ((and 
      (equal (first elements) '#\])
@@ -258,15 +256,10 @@
         (lista-succesiva (pulisci-lista (first (rest lista-precedente)))))
     (cond
      ((char= (first lista-succesiva) '#\}) 
-      (append (list parse-successivo) (list (tronca-primo lista-succesiva))))
+      (append (list parse-successivo) (list (rest lista-succesiva))))
      ((char= (first lista-succesiva) '#\,) 
-      (parse-members (tronca-primo lista-succesiva) parse-successivo))  
+      (parse-members (rest lista-succesiva) parse-successivo))  
      (T (error "errore fine-object")))))
-
-;;; tronca-primo (lista)                    ; SOSTITUIBILI
-(defun tronca-primo (lista) (rest lista))
-;;; tronca-ultimo (lista)
-(defun tronca-ultimo (lista) (butlast lista))
 
 ;;; pulisci-lista (list)
 (defun pulisci-lista (list)
@@ -275,8 +268,6 @@
           (equal (first list) '#\Tab))
       (pulisci-lista (rest list))
     list))
-
-;; ARRIVATO QUA
 
 ;;; json-access(json, &rest fields)
 ;; -Follows a chain of keys (iff JSON_obj at current level 
@@ -288,7 +279,7 @@
 
 (defun json-access (json &rest fields)
   (if (null fields)        ; returns an identity if fields is empty
-      json
+      (error "errore json-access (campo vuoto)")
   (access-supp json fields)))
 
 
