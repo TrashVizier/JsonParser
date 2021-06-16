@@ -348,7 +348,7 @@
     (equal char '#\Newline)
     (equal char '#\Tab)))
 
-;;; json-access(json, &rest fields)
+;;; json-access-supp(json, &rest fields)
 ;; -Follows a chain of keys (iff JSON_obj at current level 
 ;;  is an object) or indexes (iff JSON_obj at current level 
 ;;  is an array) in order to retrieve a certain value.
@@ -356,26 +356,27 @@
 ;; -Two different predicates are used since the keyword 
 ;;  &rest had a few issues with recursive calls.
 
+(defun json-access (json &rest fields) (json-access-supp json fields))
 
-(defun json-access (json fields)
+(defun json-access-supp (json fields)
   (cond
     ((null fields) 
-      (error "errore json-access (campo vuoto)"))
+      (error "errore json-access-supp (campo vuoto)"))
    ((caso-object-mono-fields json fields)
     (cerca-valore (rest json) (first fields)))
    ((caso-array-mono-fields json fields) 
     (cerca-posizione (rest json) (first fields)))
    ((caso-object-multi-fields json fields)
-    (json-access
+    (json-access-supp
      (cerca-valore (rest json) (first fields))
      (rest fields)))
    ((caso-array-multi-fields json fields)
-    (json-access
+    (json-access-supp
      (cerca-posizione (rest json) (first fields))
      (rest fields)))
-   (T (error "errore json-access"))))
+   (T (error "errore json-access-supp"))))
 
-;; Funzioni per aumentare la comprensibilità del cond di json-access
+;; Funzioni per aumentare la comprensibilità del cond di json-access-supp
 (defun caso-object-mono-fields (json fields) 
   (and 
     (eq (list-length fields) 1)
