@@ -443,88 +443,104 @@
          (json-parse (subseq stringa-allocata 0 contenuto-file))))))
 
 ;;; json-dump(json filename).
-;; La funzione scrive in forma lista sul file Filename il json in input parsato in 
+;; La funzione scrive in forma lista sul file Filename il json in input in forma parsata 
 (defun json-dump (JSON filename)
   (with-open-file (stream filename 
                           :direction :output 
                           :if-exists :supersede
                           :if-does-not-exist :create)
-  (format stream (json-to-string JSON))
+  (format stream (scrivi-json JSON))
   filename))
 
-;;; json-to-string (json)
-;; Checks if json is an object, the final string
-;; will be { something }; if json is an array
-;; it will be [ something ].
-(defun json-to-string (JSON)
+;;; scrivi-json (json)
+;; La funzione è di supporto
+;; La funzione scrive le parentesi graffe/quadre nel caso che json sia un object/array
+
+(defun scrivi-json (JSON)
   (cond
    ((eq (first JSON) 'json-obj) ;caso oggetto
     (concatenate 'string 
                  "{" 
                  (cancella-virgola-finale
-                  (json-print-obj (rest JSON))) 
+                  (scrivi-object (rest JSON))) 
                  "}"
                  ))
    ((eq (first JSON) 'json-array) ;caso array
     (concatenate 'string 
                  "[" 
                  (cancella-virgola-finale
-                  (json-print-array (rest JSON)))
+                  (scrivi-array (rest JSON)))
                  "]"
                  ))
-   (T (error "errore json-to-string"))))
+   (T (error "errore scrivi-json"))))
 
-;;; json-print-obj (json)
-;; Prints the first pair and then the others.
+;;; scrivi-object (members)
+;; La funzione è di supporto
+;; La funzione scrive i membri (lista di pair) di un object
+
 ; input  ==> '(("nome" "Arthur") ("cognome" "Dent"))
 ; output ==> "\"nome\":\"Arthur\",\"cognome\":\"Dent\","
-(defun json-print-obj (JSON)
-  (cond
-   ((NULL JSON) "")
-   ((listp (first JSON)) 
-    (concatenate 'string 
-                 (json-print-pair (first JSON)) 
-                 (json-print-obj (rest JSON))
-                 ))))
 
-;;; json-print-pair (json)
+(defun scrivi-object (members)
+  (cond
+   ((NULL members) "")
+   ((listp (first members)) 
+    (concatenate 'string 
+                 (scrivi-pair (first members)) 
+                 (scrivi-object (rest members))))))
+
+;;; scrivi-pair (pair)
+;; La funzione è di supporto
+;; La funzione scrive la singola pair 
+
 ; input  ==> '("nome" "Arthur")
 ; output ==> "\"nome\" : \"Arthur\", "
-(defun json-print-pair (JSON)
+
+(defun scrivi-pair (pair)
   (concatenate 'string "\""
-               (first JSON)
+               (first pair)
                "\"" " : " 
-               (json-print-value (first (rest JSON)))
+               (scrivi-value (first (rest pair)))
                ", "
                ))
 
-;;; json-print-value (value)
-;; Note: only the value to print is passed
-(defun json-print-value (value)
+;;; scrivi-value (value)
+;; La funzione è di supporto
+;; La funzione scrive la value nel caso sia un numero, una stringa o un json
+;; annidato
+
+(defun scrivi-value (value)
   (cond
    ((numberp value) ; caso numero
     (write-to-string value))
    ((stringp value) ; caso stringa
     (concatenate 'string "\"" value "\""))
-   (T (json-to-string value)))) ; caso annidato
+   (T (scrivi-json value)))) ; caso annidato
 
-;;; json-print-array (json)
-;; Prints the first element and then the others.
+;;; scrivi-array (elements)
+;; La funzione è di supporto
+;; La funzione scrive gli elementi (lista di value) di un array
+
 ; input  ==> '(1 2 3)
 ; output ==> "1, 2, 3, "
-(defun json-print-array (JSON)
+
+(defun scrivi-array (elements)
   (cond
-   ((NULL JSON) "")
+   ((NULL elements) "")
    (T (concatenate 'string 
-      (json-print-value (first JSON))
+      (scrivi-value (first elements))
        ", "
-      (json-print-array (rest JSON))
+      (scrivi-array (rest elements))
     ))))
 
-;;; cancella-virgola-finale (json)
-(defun cancella-virgola-finale (JSON)
+;;; cancella-virgola-finale (stringa)
+;; La funzione è di supporto
+;; La funzione elimina la virgola finale extra (", "), causata dal modo in cui
+;; abbiamo gestito le liste da scrivere in modo iterativo  
+
+(defun cancella-virgola-finale (stringa)
   (cond
-    ((string= "" JSON) JSON)
-    (T (subseq JSON 0 (- (length JSON) 2)))))
+    ((zerop (length stringa)) stringa)
+    (T (subseq stringa 0 (- (length stringa) 2)))))
 
 ;;;; end of file -- json-parsing.lisp
