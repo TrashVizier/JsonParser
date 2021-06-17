@@ -1,25 +1,32 @@
 ;;;; -*- Mode: Lisp -*-
 ;;;; json_parse.lisp
 
+;; Giorgio ... xxxxxx
+;; Andrea Lamparella 829602
+;; Pietro Venturini 856115
+
 ;;; json-parse (json)
 ;; La funzione prende in input una stringa e restituisce una lista dei singoli
 ;; componenti della stringa in input
 
 ; input  ==> "{\"nome\" : \"Arthur\", \"cognome\" : \"Dent\"}"
 ; output ==> (JSON-OBJ ("nome" "Arthur") ("cognome" "Dent"))
+
 (defun json-parse (json)
-   (let ((lista-chars 
-          (pulisci-lista (coerce json 'list))))
-    (cond
-     ((equal (first lista-chars) '#\{) 
-      (parse-object (rest lista-chars)))
-     ((equal (first lista-chars) '#\[) 
-      (parse-array (rest lista-chars)))
-     (T (error "errore json-parse"))
-    )))
+  (let ((lista-chars 
+         (pulizia-iniziale (coerce json 'list))))
+   (cond 
+     ((and 
+      (equal (first lista-chars) '#\{)
+      (equal (first (last lista-chars)) '#\})) 
+     (parse-object (rest lista-chars)))
+     ((and (equal (first lista-chars) '#\[)
+     (equal (first (last lista-chars)) '#\]))
+     (parse-array (rest lista-chars)))
+     (T (error "errore json-parse")))))
 
 ;;; parse-array (json)
-;; La funzinone è di supporto
+;; La funzinone e' di supporto
 ;; La funzione prende in input una lista di char rappresentate un array lo
 ;; restituisce in forma parsata
 
@@ -39,7 +46,7 @@
        
 
 ;;; parse-object (json)
-;; La funzinone è di supporto
+;; La funzinone e' di supporto
 ;; La funzione prende in input una lista di char rappresentate un object e lo
 ;; restituisce in forma parsata
 
@@ -59,10 +66,10 @@
 
 
 ;;; parse-elements (json obj)
-;; La funzione è di supporto
+;; La funzione e' di supporto
 ;; La funzione prende in input una lista di caratteri e una lista di supporto
 ;; e ritorna una lista con dentro 2 liste, la 1° ha dentro tutti gli 
-;; elementi dell'array, mentre la 2° è la lista di char restanti dell'input  
+;; elementi dell'array, mentre la 2° e' la lista di char restanti dell'input  
 
 
 ; input  ==> (coerce "1, 2, 3], {'a' : 1}" 'list) NIL
@@ -72,15 +79,15 @@
   (incolla-array (parse-value input) precedente))
 
 ;;; parse-members (json obj)
-;; La funzione è di supporto
-;; La funzione è analoga a parse-elements
+;; La funzione e' di supporto
+;; La funzione e' analoga a parse-elements
 
 (defun parse-members (input precedente)
   (incolla-object (parse-pair input)  precedente))
 
 
 ;;; parse-pair (json obj)
-;; La funzione è di supporto
+;; La funzione e' di supporto
 ;; La funzione prende in input una lista di caratteri e restituisce un output
 ;; analogo a parse-elements, ma con la lista della prima pair come primo 
 ;; elemento della lista dell'output
@@ -97,7 +104,7 @@
       (error "errore parse-pair"))))
 
 ;;; incolla-pair (json)
-;; La funzione è di supporto
+;; La funzione e' di supporto
 ;; La funzione "attacca" la value alla string della pair, 
 ;; come mostrato nell'esempio qua sotto
 
@@ -120,7 +127,7 @@
       (error "errore incolla-pair"))))
 
 ;;; parse-value (json)
-;; La funzione è di supporto
+;; La funzione e' di supporto
 ;; La funzione prende in input una lista di char e restituisce una lista con 
 ;; al 1° membro la prima value trovata
 ;; e al 2° membro la lista di char rimanente
@@ -144,7 +151,7 @@
      (T (error "errore parse-value")))))
 
 ;;; parse-number (json buffer)
-;; La funzione è di supporto
+;; La funzione e' di supporto
 ;; La funzione prende in input una lista di char e una lista buffer di supporto
 ;; e restituisce in output una lista con al 1° membro il numero e al 2° membro
 ;; la lista dei char restanti
@@ -164,7 +171,7 @@
 ))
 
 ;;; parse-number-decimale (json buffer)
-;; La funzione è di supporto a parse-number
+;; La funzione e' di supporto a parse-number
 ;; La funzione serve per i numeri float
 
 ; input  ==> (coerce "4, \"x\" : [1, 2, 3]}" 'list) '(#\5 #\6 #\.)
@@ -180,8 +187,8 @@
        (pulisci-lista (list input))))))
 
 ;;; is-digit (char)
-;; La funzione è di supporto
-;; La funzione ritorna T se l'input è un char di una cifra,
+;; La funzione e' di supporto
+;; La funzione ritorna T se l'input e' un char di una cifra,
 ;; altrimenti ritorna NIL 
 (defun is-digit (char) 
   (and 
@@ -189,7 +196,7 @@
     (char>= '#\9 char)))
 
 ;;; parse-string (input)
-;; La funzione è di supporto
+;; La funzione e' di supporto
 ;; La funzione prende in input una lista di char e restituisce una lista con
 ;; al 1° membro la prima stringa e al secondo membro la lista dei char restanti
 
@@ -203,8 +210,8 @@
     (parse-string-virgolette (rest input) NIL))))
 
 ;;; parse-string-apici (input buffer)
-;; La funzione è di supporto
-;; La funzione è analoga a parse-string, ma funziona solo sulle stringhe scritte tra apici
+;; La funzione e' di supporto
+;; La funzione e' analoga a parse-string, ma funziona solo sulle stringhe scritte tra apici
 
 ; input  ==> (coerce "\"asd\" : 5, \"pippo\" : \"franco\"}" 'list) Nil
 ; output ==> ("asd" (#\Space #\: #\Space #\5 #\, #\Space #\" #\p #\i #\p #\p #\o #\" #\Space #\: #\Space #\" #\f #\r #\a #\n #\c #\o #\" #\}))
@@ -222,8 +229,8 @@
 ))
 
 ;;; parse-string-virgolette (input buffer)
-;; La funzione è di supporto
-;; La funzione è analoga a parse-string, ma funziona solo sulle stringhe scritte tra virgolette
+;; La funzione e' di supporto
+;; La funzione e' analoga a parse-string, ma funziona solo sulle stringhe scritte tra virgolette
 
 ; input e output analoghi a parse-string-apici, ma con gli apici al posto delle virgolette
 
@@ -241,7 +248,7 @@
 ))
    
 ;;; parse-annidato (input)
-;; La funzione è di supporto
+;; La funzione e' di supporto
 ;; La funzione prende in input una lista di char e restituisce come output una
 ;; lista con al 1° membro l'array/object parsato e al 2° membro la lista dei
 ;; char restanti
@@ -259,8 +266,8 @@
     ))
 
 ;;; parse-array-annidato (input)
-;; La funzione è di supporto
-;; La funzione è analoga a parse-array, ma la lista dei char rimanenti non 
+;; La funzione e' di supporto
+;; La funzione e' analoga a parse-array, ma la lista dei char rimanenti non 
 ;; deve essere per forza vuota
 
 ; input  ==> (coerce "[1, 2, 3], 7, 5] " 'list)
@@ -279,8 +286,8 @@
          (list (first (rest result)))))))))
 
 ;;; parse-object-annidato (input)
-;; La funzione è di supporto
-;; La funzione è analoga a parse-object, ma la lista dei char rimanenti non 
+;; La funzione e' di supporto
+;; La funzione e' analoga a parse-object, ma la lista dei char rimanenti non 
 ;; deve essere per forza vuota
 
 ; input e output analoghi a parse-array-annidato
@@ -297,7 +304,7 @@
          (list (first (rest result)))))))))
 
 ;;; incolla-array (lista parse-precedente)
-;; La funzione è di supporto
+;; La funzione e' di supporto
 ;; La funzione procede al parsing di una lista di elementi di un array
 
 (defun incolla-array (lista parse-precedente)
@@ -311,7 +318,7 @@
      (T (error "errore incolla-array")))))
 
 ;;; incolla-object (lista parse-precedente)
-;; La funzione è di supporto
+;; La funzione e' di supporto
 ;; La funzione procede al parsing di una lista di elementi di un object
 
 ; input  ==> (("asd" 5) (#\, #\Space #\" #\p #\i #\p #\p #\o #\" #\Space #\: #\Space #\" #\f #\r #\a #\n #\c #\o #\" #\})) NIL
@@ -328,25 +335,31 @@
      (T (error "errore incolla-object")))))
 
 ;;; pulisci-lista (lista)
-;; La funzione è di supporto
+;; La funzione e' di supporto
 ;; La funzione prende in input una lista di caratteri e ritorna come output
 ;; La stessa lista con tutti i caratteri di spaziatura iniziali rimossi
 
 (defun pulisci-lista (lista)
-  (if (is-spazio (first lista))
+  (if (is-spaziovuoto (first lista))
       (pulisci-lista (rest lista))
     lista))
 
-;;; is-spazio (char)
-;; La funzione è di supporto
-;; La funzione ritorna T se char è uno spazio/Tab/Newline, 
+;;; is-spaziovuoto (char)
+;; La funzione e' di supporto
+;; La funzione ritorna T se char e' uno spazio/Tab/Newline, 
 ;; altrimenti ritorna NIL
 
-(defun is-spazio (char) 
-  (or 
-    (equal char '#\Space)
-    (equal char '#\Newline)
-    (equal char '#\Tab)))
+(defun is-spaziovuoto (char)
+  (if (equal NIL  (member char '(#\Space #\Newline #\Tab)))
+    NIL
+    T))
+
+;; pulizia-iniziale (lista)
+;; La funzione e' di supporto
+;; La funzione applica pulisci-lista all'inizio e alla fine della lista
+
+(defun pulizia-iniziale (lista)
+ (reverse (pulisci-lista (reverse (pulisci-lista lista)))))
 
 ;;; json-access-supp(json, &rest fields)
 ;; -Follows a chain of keys (iff JSON_obj at current level 
@@ -356,7 +369,8 @@
 ;; -Two different predicates are used since the keyword 
 ;;  &rest had a few issues with recursive calls.
 
-(defun json-access (json &rest fields) (json-access-supp json fields))
+(defun json-access (json &rest fields) 
+  (json-access-supp json fields))
 
 (defun json-access-supp (json fields)
   (cond
@@ -408,7 +422,7 @@
     (eq (first JSON) 'json-array)))
 
 ;;; cerca-valore (input string)
-;; La funzione è di supporto
+;; La funzione e' di supporto
 ;; La funzione restituisce la value corrispondente a string nella lista input
 
 ; input  ==> (("nome" "Arthur") ("cognome" "Dent")) "nome"
@@ -422,7 +436,7 @@
    ))
 
 ;;; cerca-posizione (input pos)
-;; La funzione è di supporto
+;; La funzione e' di supporto
 ;; La funzione restituisce il valore presente in input alla posizione pos
 ; input  ==> '(1 2 3) 2
 ; output ==> 3
@@ -454,7 +468,7 @@
   filename))
 
 ;;; scrivi-json (json)
-;; La funzione è di supporto
+;; La funzione e' di supporto
 ;; La funzione scrive le parentesi graffe/quadre nel caso che json sia un object/array
 
 (defun scrivi-json (JSON)
@@ -476,7 +490,7 @@
    (T (error "errore scrivi-json"))))
 
 ;;; scrivi-object (members)
-;; La funzione è di supporto
+;; La funzione e' di supporto
 ;; La funzione scrive i membri (lista di pair) di un object
 
 ; input  ==> '(("nome" "Arthur") ("cognome" "Dent"))
@@ -491,7 +505,7 @@
                  (scrivi-object (rest members))))))
 
 ;;; scrivi-pair (pair)
-;; La funzione è di supporto
+;; La funzione e' di supporto
 ;; La funzione scrive la singola pair 
 
 ; input  ==> '("nome" "Arthur")
@@ -506,7 +520,7 @@
                ))
 
 ;;; scrivi-value (value)
-;; La funzione è di supporto
+;; La funzione e' di supporto
 ;; La funzione scrive la value nel caso sia un numero, una stringa o un json
 ;; annidato
 
@@ -519,7 +533,7 @@
    (T (scrivi-json value)))) ; caso annidato
 
 ;;; scrivi-array (elements)
-;; La funzione è di supporto
+;; La funzione e' di supporto
 ;; La funzione scrive gli elementi (lista di value) di un array
 
 ; input  ==> '(1 2 3)
@@ -535,7 +549,7 @@
     ))))
 
 ;;; cancella-virgola-finale (stringa)
-;; La funzione è di supporto
+;; La funzione e' di supporto
 ;; La funzione elimina la virgola finale extra (", "), causata dal modo in cui
 ;; abbiamo gestito le liste da scrivere in modo iterativo  
 
