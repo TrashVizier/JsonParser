@@ -1,16 +1,15 @@
-%%%% Funziona tutto
-
 %%%% -*- Mode: Prolog -*-
-%%%%  json-parsing.pl
+%%%%  json_parsing.pl
 
 %%% json_parse/2
-% Il predicato è vero quando JSONString è un atomo che può essere parsato in un json Object     %% da riscrivere meglio come commento 
+%% Il predicato è vero quando JSONString è un atomo che può essere parsato in 
+%% un json Object
 
 %% Caso oggetto
 json_parse(JSONString, Object) :-
-    string_chars(JSONString, JSONChars),
+    atom_chars(JSONString, JSONChars),
     pulisci_stringa(JSONChars, JSONChars_pulita),
-    json_object(JSONChars_pulita, Resto, [], Object),
+    parse_object(JSONChars_pulita, Resto, [], Object),
     pulisci_stringa(Resto, Resto_pulito),
     is_empty(Resto_pulito),
     !.
@@ -18,165 +17,167 @@ json_parse(JSONString, Object) :-
 json_parse(JSONString, Object) :-
     string_codes(JSONString, JSONChars),
     pulisci_stringa(JSONChars, JSONChars_pulita),
-    json_array(JSONChars_pulita, Resto, [], Object),
+    parse_array(JSONChars_pulita, Resto, [], Object),
     pulisci_stringa(Resto, Resto_pulito),
     is_empty(Resto_pulito),
     !.
 
-%%% json_object/4
+%%% parse_object/4
 %% il predicato è di supporto a json_parse
 %% il predicato parsa l'input nel caso in cui sia un oggetto
 
 %% caso oggetto vuoto {}
-json_object(Input, Restante, Precedente, json_obj(Precedente)) :-    
-    first_char("{", Input, Input_senza_graffa),
+parse_object(Input, Restante, Prec, json_obj(Prec)) :-    
+    tronca_char("{", Input, Input_senza_graffa),
     pulisci_stringa(Input_senza_graffa, Input_senza_graffa_pulito),
-    first_char("}", Input_senza_graffa_pulito, Restante),
+    tronca_char("}", Input_senza_graffa_pulito, Restante),
     !.
 
 %% caso oggetto "pieno" {"a" : 1, "b" : 2}
-json_object(Input, Resto, Precedente, json_obj(Successivo)) :-   
-    first_char("{", Input, Input_senza_graffa),
+parse_object(Input, Resto, Prec, json_obj(Succ)) :-   
+    tronca_char("{", Input, Input_senza_graffa),
     !,
     pulisci_stringa(Input_senza_graffa, Input_senza_graffa_pulito),
-    json_members(Input_senza_graffa_pulito, Resto_members, Precedente, Successivo),
+    parse_members(Input_senza_graffa_pulito, Resto_members, Prec, Succ),
     pulisci_stringa(Resto_members, Resto_members_pulito),
-    first_char("}", Resto_members_pulito, Resto).
+    tronca_char("}", Resto_members_pulito, Resto).
 
-%%%  json_array/4
+%%%  parse_array/4
 %% il predicato è di supporto a json_parse
 %% il predicato parsa l'input nel caso in cui sia un array
 
 %% Caso array vuoto []
-json_array(Input, Resto, Precedente, json_array(Precedente)) :-
-    first_char("[", Input, Input_senza_quadra),
+parse_array(Input, Resto, Prec, json_array(Prec)) :-
+    tronca_char("[", Input, Input_senza_quadra),
     pulisci_stringa(Input_senza_quadra, Input_senza_quadra_pulito),
-    first_char("]", Input_senza_quadra_pulito, Resto),
+    tronca_char("]", Input_senza_quadra_pulito, Resto),
     !.
 
 %% caso array pieno [1, 2, 3]
-json_array(Input, Resto, Precedente, json_array(Successivo)) :-
-    first_char("[", Input, Input_senza_quadra),
+parse_array(Input, Resto, Prec, json_array(Succ)) :-
+    tronca_char("[", Input, Input_senza_quadra),
     !,
     pulisci_stringa(Input_senza_quadra, Input_senza_quadra_pulito),
-    json_elements(Input_senza_quadra_pulito, Resto_elements, Precedente, Successivo),
+    parse_elements(Input_senza_quadra_pulito, Resto_elements, Prec, Succ),
     pulisci_stringa(Resto_elements, Resto_elements_pulito),
-    first_char("]", Resto_elements_pulito, Resto).
+    tronca_char("]", Resto_elements_pulito, Resto).
 
-%%%  json_member/4
-%% il predicato è di supporto a json_object
+%%%  parse_members/4
+%% il predicato è di supporto a parse_object
 %% il predicato parsa l'input nel caso in cui sia una lista di pairs
 
 %% caso generale 
-json_members(Input, Resto, Precedente, Successivo) :-
-    json_pair(Input, Resto_pair, Precedente, Pair_successivo),
+parse_members(Input, Resto, Prec, Succ) :-
+    parse_pair(Input, Resto_pair, Prec, Pair_succ),
     pulisci_stringa(Resto_pair, Resto_pair_pulito),
-    first_char(",", Resto_pair_pulito, Resto_senza_virgola),
+    tronca_char(",", Resto_pair_pulito, Resto_senza_virgola),
     pulisci_stringa(Resto_senza_virgola, Resto_senza_virgola_pulito),
-    json_members(Resto_senza_virgola_pulito, Resto, Pair_successivo, Successivo),
+    parse_members(Resto_senza_virgola_pulito, Resto, Pair_succ, Succ),
     !.
 
 %% caso ultima pair
-json_members(Input, Resto, Precedente, Successivo) :-
-    json_pair(Input, Resto, Precedente, Successivo),
+parse_members(Input, Resto, Prec, Succ) :-
+    parse_pair(Input, Resto, Prec, Succ),
     !.
 
-%%% json_elements/4
-%% il predicato è di supporto a json_array
-%% il predicato parsa l'input nel caso in cui sia una lista di value all'interno di un array
+%%% parse_elements/4
+%% il predicato è di supporto a parse_array
+%% il predicato parsa l'input nel caso in cui sia una lista di value 
+%% all'interno di un array
 
 %% caso generale
-json_elements(Input, Resto, Precedente, Successivo) :-
-    json_value(Input, Resto_value, Value),
+parse_elements(Input, Resto, Prec, Succ) :-
+    parse_value(Input, Resto_value, Value),
     pulisci_stringa(Resto_value, Resto_value_pulito),
-    first_char(",", Resto_value_pulito, Resto_con_virgola),
+    tronca_char(",", Resto_value_pulito, Resto_con_virgola),
     pulisci_stringa(Resto_con_virgola, Resto_con_virgola_pulito),
     !,
-    append(Precedente, [Value], Successivo_value),
-    json_elements(Resto_con_virgola_pulito, Resto, Successivo_value, Successivo).
+    append(Prec, [Value], Succ_value),
+    parse_elements(Resto_con_virgola_pulito, Resto, Succ_value, Succ).
 
 %% caso ultima value
-json_elements(Input, Resto, Precedente, Successivo) :-
-    json_value(Input, Resto, Value),
-    append(Precedente, [Value], Successivo),
+parse_elements(Input, Resto, Prec, Succ) :-
+    parse_value(Input, Resto, Value),
+    append(Prec, [Value], Succ),
     !.
 
-%%% json_pair/4
-%% il predicato è di supporto a json_members
+%%% parse_pair/4
+%% il predicato è di supporto a parse_members
 %% il predicato parsa l'input nel caso in cui sia una pair
 
-json_pair(Input, Resto_value, Precedente, Successivo) :-
-    json_string(Input, Resto_stringa, String),
+parse_pair(Input, Resto_value, Prec, Succ) :-
+    parse_string(Input, Resto_stringa, String),
     pulisci_stringa(Resto_stringa, Resto_stringa_pulito),
-    first_char(":", Resto_stringa_pulito, Resto_senza_dp),
+    tronca_char(":", Resto_stringa_pulito, Resto_senza_dp),
     pulisci_stringa(Resto_senza_dp, Resto_senza_dp_pulito),
-    json_value(Resto_senza_dp_pulito, Resto_value, Value),
-    append(Precedente, [(String, Value)], Successivo).
+    parse_value(Resto_senza_dp_pulito, Resto_value, Value),
+    append(Prec, [(String, Value)], Succ).
 
-%%% json_string/3
+%%% parse_string/3
 %% il predicato è di supporto
-% il predicato è vero quando dalla lista di char Input può essere estratta la stringa String e con rimanente la lista di char Resto 
+%% il predicato è vero quando dalla lista di char Input può essere estratta la
+%% stringa String e con rimanente la lista di char Resto 
 
 %% caso stringa con apici 'stringa'
-json_string(Input, Resto, String) :-
-    first_char("\'", Input, Input_senza_apice),      %'%COMMENTO DA TOGLIERE
+parse_string(Input, Resto, String) :-
+    tronca_char("\'", Input, Input_senza_apice),      %'%COMMENTO DA TOGLIERE
     !,
-    spezza_stringa_apice(Input_senza_apice, Value_char_dp, String_char),
-    first_char("\'", Value_char_dp, Resto),     %'%COMMENTO DA TOGLIERE
+    spezza_string_apice(Input_senza_apice, Value_char_dp, String_char),
+    tronca_char("\'", Value_char_dp, Resto),     %'%COMMENTO DA TOGLIERE
     string_chars(String, String_char).
 
 %% caso stringa con virgolette "stringa"
-json_string(Input, Resto, Key) :-
-    first_char("\"", Input, Input_senza_apice),
+parse_string(Input, Resto, Key) :-
+    tronca_char("\"", Input, Input_senza_apice),
     !,
-    spezza_stringa_virgolette(Input_senza_apice, Value_char_dp, Key_char),
-    first_char("\"", Value_char_dp, Resto),
+    spezza_string_virgolette(Input_senza_apice, Value_char_dp, Key_char),
+    tronca_char("\"", Value_char_dp, Resto),
     string_chars(Key, Key_char).
 
-%%% json_value/3
+%%% parse_value/3
 %% il predicato è di supporto
-%% il predicato determina la tipologia della value Input e la parsas ne modo corretto
+%% il predicato determina il tipo di value Input e la parsa nel modo corretto
 
 %% caso string
-json_value(Input, Resto, Output) :-
-    json_string(Input, Resto, Output),
+parse_value(Input, Resto, Output) :-
+    parse_string(Input, Resto, Output),
     !.
 
 %% caso number
-json_value(Input, Resto, Output) :-
-    json_number(Input, Resto, Output),
+parse_value(Input, Resto, Output) :-
+    parse_number(Input, Resto, Output),
     !. 
 
 %% caso oggetto annidato
-json_value(Input, Resto, Output) :-
-    json_object(Input, Resto, [], Output),
+parse_value(Input, Resto, Output) :-
+    parse_object(Input, Resto, [], Output),
     !.
 
 %% caso array annidato
-json_value(Input, Resto, Output) :-
-    json_array(Input, Resto, [], Output),
+parse_value(Input, Resto, Output) :-
+    parse_array(Input, Resto, [], Output),
     !.
 
 
-%%% json_number/3
+%%% parse_number/3
 %% il predicato è di supporto
 %% il predicato parsa l'input nel caso in cui sia un numero (integer o float)
 
 %% caso numero float (numero.numero)
-json_number(Input, Resto, Num) :-
-    number_creation(Input, Resto, Int),
+parse_number(Input, Resto, Num) :-
+    spezza_number(Input, Resto, Int),
     is_not_empty(Int),
-    first_char(".", Resto, Resto_senza_punto),
+    tronca_char(".", Resto, Resto_senza_punto),
     !,
     append(Int, ['.'], Int_con_punto),
-    number_creation(Resto_senza_punto, Resto, Decimale),
+    spezza_number(Resto_senza_punto, Resto, Decimale),
     is_not_empty(Decimale),
     append(Int_con_punto, Decimale, Float),
     number_chars(Num, Float).
 
 %% caso numero int 
-json_number(Input, Resto, Num) :-
-    number_creation(Input, Resto, Int),
+parse_number(Input, Resto, Num) :-
+    spezza_number(Input, Resto, Int),
     is_not_empty(Int),
     !,
     number_chars(Num, Int).
@@ -184,69 +185,81 @@ json_number(Input, Resto, Num) :-
 
 %%% is_not_empty/1
 %% predicato di controllo
-is_not_empty(Lista) :- Lista \= [], !.
+is_not_empty(Lista) :- Lista \= [].
 
+%%% is_empty/1
+%% predicato di controllo
+is_empty([]).
 
-%%% first_char/3
-%% rimuove il primo carattere dalla lista solo se CharToMatch è il primo della lista
+%%% tronca_char/3
+%% Il predicato rimuove il primo carattere dalla lista solo se CharToMatch 
+%% e' il primo char della lista
 
-first_char(String_chars, [Char | Tail], Tail):-
+tronca_char(String_chars, [Char | Tail], Tail):-
     atom_string(Char, String_chars).
 
-%%% number_creation/3
-number_creation([H | Tail], [H | Tail], []) :-
-    not(cifra(H)),
+%%% spezza_number/3
+%% Il predicato ha una funziona analoga a spezza_string_apice e
+%% spezza_string_virgolette, ma con i numeri
+
+spezza_number([H | Tail], [H | Tail], []) :-
+    not(digit(H)),
     !.
-number_creation([H | Tail1], X, [H | Tail2]) :-
-    number_creation(Tail1, X, Tail2).
+spezza_number([H | Tail1], X, [H | Tail2]) :-
+    spezza_number(Tail1, X, Tail2).
 
-cifra('0').
-cifra('1').
-cifra('2').
-cifra('3').
-cifra('4').
-cifra('5').
-cifra('6').
-cifra('7').
-cifra('8').
-cifra('9').
+digit('0').
+digit('1').
+digit('2').
+digit('3').
+digit('4').
+digit('5').
+digit('6').
+digit('7').
+digit('8').
+digit('9').
 
-%%% spezza_stringa_apice/3 
-%% il predicato cerca carattere per carattere l'apice e poi quando lo trova restituisce le 2 liste a sx e a dx di esso
+%%% spezza_string_apice/3 
+%% il predicato cerca carattere per carattere l'apice e poi quando lo
+%% trova restituisce le 2 liste a dx e a sx di esso
+%% N.B. Le 2 liste sono invertite
 %% "asd' : 123"=> "' : 123" e "asd"
 
-%% caso in cui trovo delle virgolette => fallisco
-spezza_stringa_apice(['\"' | _], _, _) :-   
+%% caso in cui trovo delle virgolette
+spezza_string_apice(['\"' | _], _, _) :-   
     !,
     fail.
     
-%% caso in cui trovo l'apice => restituisco la parte restante e riempio la lista a dx con il backtracking       
-spezza_stringa_apice(['\'' | Tail], ['\'' | Tail], []).
+%% caso in cui trovo l'apice    
+spezza_string_apice(['\'' | Tail], ['\'' | Tail], []) :- !.
 
 %% caso generale
-spezza_stringa_apice([H | Tail1], X, [H | Tail2]) :-
-    spezza_stringa_apice(Tail1, X, Tail2).
+spezza_string_apice([H | Tail1], X, [H | Tail2]) :-
+    spezza_string_apice(Tail1, X, Tail2).
 
 
 
-%%% spezza_stringa_virgolette/3
-%% il predicato è analogo a spezza_stringa_apice, ma con le virgolette al posto dell'apice
+%%% spezza_string_virgolette/3
+%% il predicato è analogo a spezza_string_apice,
+%% ma con le virgolette al posto dell'apice
 
-%% caso in cui trovo un apice => fallisco
-spezza_stringa_virgolette(['\'' | _], _, _) :-
+%% caso in cui trovo un apice 
+spezza_string_virgolette(['\'' | _], _, _) :-
     !,
     fail.
 
-%% caso in cui trovo le virgolette => restituisco la parte restante e riempio la lista a dx con il backtracking
-spezza_stringa_virgolette(['\"' | Tail], ['\"' | Tail], []).
+%% caso in cui trovo le virgolette
+spezza_string_virgolette(['\"' | Tail], ['\"' | Tail], []) :- !.
 
 %% caso generale
-spezza_stringa_virgolette([H | Tail1], X, [H | Tail2]) :-
-    spezza_stringa_virgolette(Tail1, X, Tail2).
+spezza_string_virgolette([H | Tail1], X, [H | Tail2]) :-
+    spezza_string_virgolette(Tail1, X, Tail2).
 
 
 %%% pulisci_stringa/2
-%% Il predicato è vero quando la lista a dx è uguale alla lista a sx, ma senza i caratteri spazio iniziali  
+%% Il predicato è vero quando la lista a dx è uguale alla lista a sx,
+%% ma senza i caratteri spazio iniziali  
+
 pulisci_stringa([],[]) :- !.
 
 pulisci_stringa([Char | Tail], Lista_pulita) :-
@@ -300,34 +313,34 @@ json_access(JSON_obj, [X|Xs], Finale) :-
 
 % Caso oggetto
 json_access_supp(json_obj([Lista_membri]), Chiave, Finale) :-
-    access_member([Lista_membri], Chiave, Finale).
+    cerca_valore([Lista_membri], Chiave, Finale).
 
 %% Caso array
 json_access_supp(json_array([Lista_elementi]), Posizione , Result) :-
-    access-posizione-array([Lista_elementi], Posizione, Result).
+    cerca_posizione([Lista_elementi], Posizione, Result).
 
-%%% access_member/3
+%%% cerca_valore/3
 %% Cerca la value data la Stringa in un oggetto
-access_member([], _, _) :- fail.
+cerca_valore([], _, _) :- fail.
 
-access_member([(S, V) | _], S, V) :-
+cerca_valore([(S, V) | _], S, V) :-
     string(S), !.
 
-access_member([_ | Tail], S, V) :-
+cerca_valore([_ | Tail], S, V) :-
     string(S),
-    access_member(Tail, S, V).
+    cerca_valore(Tail, S, V).
 
-%%% access-posizione-array/3
+%%% cerca_posizione/3
 %% Cerca l'elemento data la posizione in un array
 
-access-posizione-array([],[_], _) :- fail.
+cerca_posizione([],[_], _) :- fail.
 
-access-posizione-array([H | _], 0, H).
+cerca_posizione([H | _], 0, H).
 
-access-posizione-array([_ | Tail], Contatore, Risultato) :-
+cerca_posizione([_ | Tail], Contatore, Risultato) :-
     number(Contatore),
     Count is Contatore - 1,
-    access-posizione-array(Tail, Count, Risultato).
+    cerca_posizione(Tail, Count, Risultato).
 
 
 %%% json_read/2
@@ -338,8 +351,22 @@ json_read(Filename, Parsed) :-
     open(Filename, read, In),
     read_stream_to_codes(In, Ascii),
     close(In),
-    atom_codes(JSONString, Ascii),
+    pulisci_ascii(Ascii, Ascii_pulito),
+    atom_codes(JSONString, Ascii_pulito),
     json_parse(JSONString, Parsed).
+
+%%% pulisci_ascii/2
+%% Il predicato è di supporto
+%% Il predicato è vero quando il 2° argomento è una lista uguale al 1° 
+%% argomento, ma con tutti i /t, /n sostituiti da uno spazio 
+
+pulisci_ascii([], []).
+pulisci_ascii([10 | T1], [32 | T2]) :- %caso \t
+    pulisci_ascii(T1, T2), !. 
+pulisci_ascii([9 | T1], [32 | T2]) :- %caso \n
+    pulisci_ascii(T1, T2), !.
+pulisci_ascii([H | T1], [H | T2]) :- %caso generale
+    pulisci_ascii(T1, T2), !.
 
 %%% json_dump/2
 %% Il predicato è vero quando il json parsato JSON viene scritto sul file 
@@ -347,84 +374,84 @@ json_read(Filename, Parsed) :-
 
 json_dump(JSON, Filename) :-
     open(Filename, write, Out),
-    json_print(JSON, JSONString),
+    scrivi_json(JSON, JSONString),
     write(Out, JSONString),
     close(Out).
 
-%%% json_print/2
+%%% scrivi_json/2
 %% Il predicato è di supporto a json_dump
 %% Il predicato "de-parsa" il json parsato e lo restituisce come stringa
 
 %% Caso oggetto vuoto
-json_print(json_obj([]), "{}").
+scrivi_json(json_obj([]), "{}").
 
 %% Caso generale oggetto
-json_print(json_obj(Lista_membri), JSONString) :-
+scrivi_json(json_obj(Lista_membri), JSONString) :-
     !,
-    json_print_object(Lista_membri, "", Membri),
+    scrivi_object(Lista_membri, "", Membri),
     concat("{", Membri, Membri_con_graffa),
     concat(Membri_con_graffa, "}", JSONString).
 
 %% Caso array vuoto
-json_print(json_array([]), "[]").
+scrivi_json(json_array([]), "[]").
 
 %% Caso generale array
-json_print(json_array(Lista_elementi), JSONString) :-
+scrivi_json(json_array(Lista_elementi), JSONString) :-
     !,
-    json_print_array(Lista_elementi, "", Elementi),
+    scrivi_array(Lista_elementi, "", Elementi),
     concat("[", Elementi, Elementi_con_graffa),
     concat(Elementi_con_graffa, "]", JSONString).
 
 
-%%% json_print_object/3
-%% Il predicato è di supporto a json_print
+%%% scrivi_object/3
+%% Il predicato è di supporto a scrivi_json
 
-json_print_object([], Precedente, Finale) :-
+scrivi_object([], Prec, Finale) :-
     !,
-    string_concat(Finale, ", ", Precedente).    % tolgo la virgola extra finale
+    string_concat(Finale, ", ", Prec). % tolgo la virgola extra finale
 
-json_print_object([(K,V)| Tail], Precedente, Finale) :-
-    json_print_stringa(K, Key),
-    string_concat(Precedente, Key, Precedente_Key),
-    string_concat(Precedente_Key, " : ", Precedente_Key_dp),
-    json_print_value(V, Value),
-    string_concat(Precedente_Key_dp, Value, Precedente_KV),
-    string_concat(Precedente_KV, ", ", Precedente_KV_v),
-    json_print_object(Tail, Precedente_KV_v, Finale).
+scrivi_object([(K,V)| Tail], Prec, Finale) :-
+    scrivi_string(K, Key),
+    string_concat(Prec, Key, Prec_Key),
+    string_concat(Prec_Key, " : ", Prec_Key_dp),
+    scrivi_value(V, Value),
+    string_concat(Prec_Key_dp, Value, Prec_KV),
+    string_concat(Prec_KV, ", ", Prec_KV_v),
+    scrivi_object(Tail, Prec_KV_v, Finale).
 
-%%% json_print_array/3
-%% Il predicato è di supporto a json_print
+%%% scrivi_array/3
+%% Il predicato è di supporto a scrivi_json
 
-json_print_array([], Precedente, Finale) :-
+scrivi_array([], Prec, Finale) :-
     !,
-    string_concat(Finale, ", ", Precedente).    % tolgo la virgola extra finale
+    string_concat(Finale, ", ", Prec). % tolgo la virgola extra finale
 
-json_print_array([E| Tail], Precedente, Finale) :-
-    json_print_value(E, Elemento),
-    string_concat(Precedente, Elemento, Precedente_el),
-    string_concat(Precedente_el, ", ", Precedente_el_v),
-    json_print_array(Tail, Precedente_el_v, Finale).
+scrivi_array([E| Tail], Prec, Finale) :-
+    scrivi_value(E, Elemento),
+    string_concat(Prec, Elemento, Prec_el),
+    string_concat(Prec_el, ", ", Prec_el_v),
+    scrivi_array(Tail, Prec_el_v, Finale).
 
-%%% json_print_value/2
+%%% scrivi_value/2
 %% Il predicato è di supporto
 
 %% Caso elemento = numero
-json_print_value(E, E) :-
+scrivi_value(E, E) :-
     number(E), !.
 
 %% Caso elemento = stringa
-json_print_value(E, R) :-
-    json_print_stringa(E, R), !.
+scrivi_value(E, R) :-
+    scrivi_string(E, R), !.
 
 %% caso elemento = sottooggetto o sottoarray
-json_print_value(E, R) :-
-    json_print(E, R),
+scrivi_value(E, R) :-
+    scrivi_json(E, R),
     !.
 
-%%% json_print_stringa/2
-%% Il predicato è di supporto a json_print_object
+%%% scrivi_string/2
+%% Il predicato è di supporto a scrivi_object
 
-json_print_stringa(S, R) :-
+scrivi_string(S, R) :-
     string(S),
     !,
     string_concat("\"", S, S_virogoletta),
