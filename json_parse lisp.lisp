@@ -1,9 +1,9 @@
 ;;;; -*- Mode: Lisp -*-
 ;;;; json_parse.lisp
 
-;; Giorgio Gragnano   822433
-;; Andrea Lamparella  829602
-;; Pietro Venturini   856115
+;; 822433 Giorgio Gragnano
+;; 829602 Andrea Lamparella
+;; 856115 Pietro Venturini
 
 ;;; json-parse (json)
 ;; La funzione prende in input una stringa e ne restituisce una lista dei 
@@ -33,9 +33,9 @@
      (equal (first elements) '#\])
      (null (pulisci-lista (rest elements)))) 
     '(json-array))
-   (T (let ((result (parse-elements elements NIL)))
-        (if (null (pulisci-lista (first (rest result))))
-            (append '(json-array) (first result))
+   (T (let ((esito (parse-elements elements NIL)))
+        (if (null (pulisci-lista (first (rest esito))))
+            (append '(json-array) (first esito))
           (error "errore parse-array")))))))
        
 ;;; parse-object (json)
@@ -77,8 +77,8 @@
   (let((lista-pulita (pulisci-lista lista)))
     (if (or (equal (first lista-pulita) '#\") 
             (equal (first lista-pulita) '#\'))
-        (let ((result (parse-string lista-pulita)))
-          (incolla-pair result))
+        (let ((esito (parse-string lista-pulita)))
+          (incolla-pair esito))
       (error "errore parse-pair"))))
 
 ;;; incolla-pair (json)
@@ -93,14 +93,14 @@
         (lista-restante (pulisci-lista (first (rest input))))
         (lista-pair (list (first input))))
     (if (equal (first lista-restante) '#\:)
-        (let ((result 
+        (let ((esito 
                (parse-value 
                 (pulisci-lista (rest lista-restante)))))
            (append
             (list (append 
                    lista-pair
-                   (list (first result))))
-            (list (first (rest result)))))
+                   (list (first esito))))
+            (list (first (rest esito)))))
       (error "errore incolla-pair"))))
 
 ;;; parse-value (json)
@@ -113,14 +113,17 @@
     (cond
      ((or (equal (first input-pulito) '#\") 
           (equal (first input-pulito) '#\')) 
-      (parse-string input-pulito)) ;caso di value = stringa
+      ;caso di value = stringa    
+      (parse-string input-pulito)) 
      ((and (char<= '#\0 (first input-pulito)) 
            (char>= '#\9 (first input-pulito))) 
-      (parse-number input-pulito NIL)) ;caso di value = number
+      ;caso di value = number     
+      (parse-number input-pulito NIL)) 
      ((or 
        (equal (first input-pulito) '#\{) 
        (equal (first input-pulito) '#\[)) 
-      (parse-annidato input-pulito)) ; caso di value = oggetto/array annidato
+      ; caso di value = oggetto/array annidato 
+      (parse-annidato input-pulito)) 
      (T (error "errore parse-value")))))
 
 ;;; parse-number (json buffer)
@@ -133,7 +136,8 @@
    ((null input) (error "errore parse-number"))
    ((is-digit (first input))  
     (parse-number (rest input) (append buffer (list (first input)))))
-   ((char= '#\. (first input)) ; caso numero float
+    ; caso numero float
+   ((char= '#\. (first input)) 
     (parse-number-decimale (rest input) (append buffer (list (first input)))))
    (T (append 
        (list (parse-integer (coerce buffer 'string)))
@@ -149,7 +153,7 @@
    ((is-digit (first input)) 
     (parse-number-decimale (rest input) (append buffer (list (first input)))))
    (T (append 
-       (list (parse-float (coerce buffer 'string))) ; converte il buffer da string a float
+       (list (parse-float (coerce buffer 'string)))
        (pulisci-lista (list input))))))
 
 ;;; is-digit (char)
@@ -167,13 +171,14 @@
 
 (defun parse-string (input)
   (cond 
-   ((char= '#\' (first input)) ; caso di "asd"
+   ((char= '#\' (first input))
     (parse-string-apici (rest input) NIL))
-   ((char= '#\" (first input)) ; caso di 'asd'
+   ((char= '#\" (first input))
     (parse-string-virgolette (rest input) NIL))))
 
 ;;; parse-string-apici (input buffer)
-;; La funzione e' analoga a parse-string, ma funziona solo sulle stringhe scritte tra apici
+;; La funzione e' analoga a parse-string ma funziona solo sulle stringhe 
+;; scritte tra apici
 
 (defun parse-string-apici (input buffer)
   (cond
@@ -189,7 +194,8 @@
 ))
 
 ;;; parse-string-virgolette (input buffer)
-;; La funzione e' analoga a parse-string, ma funziona solo sulle stringhe scritte tra virgolette
+;; La funzione e' analoga a parse-string, ma funziona solo sulle stringhe 
+;; scritte tra virgolette
 
 (defun parse-string-virgolette (input buffer)
   (cond
@@ -212,11 +218,11 @@
 (defun parse-annidato (input)
   (cond
    ((equal (first input) '#\{) 
-    (let ((result (parse-object-annidato (rest input))))
-      result))
+    (let ((esito (parse-object-annidato (rest input))))
+      esito))
    ((equal (first input) '#\[) 
-    (let ((result (parse-array-annidato (rest input))))
-      result))
+    (let ((esito (parse-array-annidato (rest input))))
+      esito))
     ))
 
 ;;; parse-array-annidato (input)
@@ -230,10 +236,10 @@
     (append 
      (list '(json-array)) 
      (list (rest input-pulito))))
-   (T (let ((result (parse-elements input-pulito NIL)))
+   (T (let ((esito (parse-elements input-pulito NIL)))
         (append 
-         (list (append '(json-array) (first result))) 
-         (list (first (rest result)))))))))
+         (list (append '(json-array) (first esito))) 
+         (list (first (rest esito)))))))))
 
 ;;; parse-object-annidato (input)
 ;; La funzione e' analoga a parse-object, ma la lista dei char rimanenti non 
@@ -246,10 +252,10 @@
     (append 
      (list '(json-obj)) 
      (list (rest input-pulito))))
-   (T (let ((result (parse-members input-pulito NIL))) 
+   (T (let ((esito (parse-members input-pulito NIL))) 
         (append 
-         (list (append '(json-obj) (first result))) 
-         (list (first (rest result)))))))))
+         (list (append '(json-obj) (first esito))) 
+         (list (first (rest esito)))))))))
 
 ;;; incolla-array (lista parse-precedente)
 ;; La funzione procede al parsing di una lista di elementi di un array
@@ -302,12 +308,8 @@
  (reverse (pulisci-lista (reverse (pulisci-lista lista)))))
 
 ;;; json-access-supp(json, &rest fields)
-;; -Follows a chain of keys (iff JSON_obj at current level 
-;;  is an object) or indexes (iff JSON_obj at current level 
-;;  is an array) in order to retrieve a certain value.
-;; -The main idea is to simply go through the list as needed.
-;; -Two different predicates are used since the keyword 
-;;  &rest had a few issues with recursive calls.
+;; La funzione restituisce la value ottenuta seguendo la sequenza di campi
+;; appartenenti a fields a partire da json
 
 (defun json-access (json &rest fields) 
   (json-access-supp json fields))
@@ -394,7 +396,7 @@
          (json-parse (subseq stringa-allocata 0 contenuto-file))))))
 
 ;;; json-dump(json filename) 
-;; La funzione scrive in forma lista sul file filename il json in input in forma parsata 
+;; La funzione scrive con sintassi JSON sul file filename il json in input
 
 (defun json-dump (JSON filename)
   (with-open-file (stream filename 
@@ -454,11 +456,11 @@
 
 (defun scrivi-value (value)
   (cond
-   ((numberp value) ; caso numero
+   ((numberp value) 
     (write-to-string value))
-   ((stringp value) ; caso stringa
+   ((stringp value) 
     (concatenate 'string "\"" value "\""))
-   (T (scrivi-json value)))) ; caso annidato
+   (T (scrivi-json value)))) 
 
 ;;; scrivi-array (elements)
 ;; La funzione scrive gli elementi (lista di value) di un array

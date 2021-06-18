@@ -1,6 +1,10 @@
 %%%% -*- Mode: Prolog -*-
 %%%%  json_parsing.pl
 
+%% 822433 Giorgio Gragnano
+%% 829602 Andrea Lamparella
+%% 856115 Pietro Venturini
+
 %%% json_parse/2
 %% Il predicato è vero quando JSONString è un atomo che può essere parsato in 
 %% un json Object
@@ -23,7 +27,7 @@ json_parse(JSONString, Object) :-
     !.
 
 %%% parse_object/4
-%% il predicato è di supporto a json_parse
+%% Il predicato è di supporto a json_parse
 %% il predicato parsa l'input nel caso in cui sia un oggetto
 
 %% caso oggetto vuoto {}
@@ -33,7 +37,7 @@ parse_object(Input, Restante, Prec, json_obj(Prec)) :-
     tronca_char("}", Input_senza_graffa_pulito, Restante),
     !.
 
-%% caso oggetto "pieno" {"a" : 1, "b" : 2}
+%% caso oggetto pieno {"a" : 1, "b" : 2}
 parse_object(Input, Resto, Prec, json_obj(Succ)) :-   
     tronca_char("{", Input, Input_senza_graffa),
     !,
@@ -120,10 +124,10 @@ parse_pair(Input, Resto_value, Prec, Succ) :-
 
 %% caso stringa con apici 'stringa'
 parse_string(Input, Resto, String) :-
-    tronca_char("\'", Input, Input_senza_apice),      %'%COMMENTO DA TOGLIERE
+    tronca_char("\'", Input, Input_senza_apice),
     !,
     spezza_string_apice(Input_senza_apice, Value_char_dp, String_char),
-    tronca_char("\'", Value_char_dp, Resto),     %'%COMMENTO DA TOGLIERE
+    tronca_char("\'", Value_char_dp, Resto),
     string_chars(String, String_char).
 
 %% caso stringa con virgolette "stringa"
