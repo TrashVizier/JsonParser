@@ -6,7 +6,7 @@
 %% 856115 Pietro Venturini
 
 %%% json_parse/2
-%% Il predicato è vero quando JSONString è un atomo che può essere parsato in 
+%% Il predicato e' vero quando JSONString e' un atomo che può essere parsato in 
 %% un json Object
 
 %% Caso oggetto
@@ -27,8 +27,7 @@ json_parse(JSONString, Object) :-
     !.
 
 %%% parse_object/4
-%% Il predicato è di supporto a json_parse
-%% il predicato parsa l'input nel caso in cui sia un oggetto
+%% Il predicato parsa l'input nel caso in cui sia un oggetto
 
 %% caso oggetto vuoto {}
 parse_object(Input, Restante, Prec, json_obj(Prec)) :-    
@@ -47,8 +46,7 @@ parse_object(Input, Resto, Prec, json_obj(Succ)) :-
     tronca_char("}", Resto_members_pulito, Resto).
 
 %%%  parse_array/4
-%% il predicato è di supporto a json_parse
-%% il predicato parsa l'input nel caso in cui sia un array
+%% Il predicato parsa l'input nel caso in cui sia un array
 
 %% Caso array vuoto []
 parse_array(Input, Resto, Prec, json_array(Prec)) :-
@@ -57,7 +55,7 @@ parse_array(Input, Resto, Prec, json_array(Prec)) :-
     tronca_char("]", Input_senza_quadra_pulito, Resto),
     !.
 
-%% caso array pieno [1, 2, 3]
+%% Caso array pieno [1, 2, 3]
 parse_array(Input, Resto, Prec, json_array(Succ)) :-
     tronca_char("[", Input, Input_senza_quadra),
     !,
@@ -67,8 +65,7 @@ parse_array(Input, Resto, Prec, json_array(Succ)) :-
     tronca_char("]", Resto_elements_pulito, Resto).
 
 %%%  parse_members/4
-%% il predicato è di supporto a parse_object
-%% il predicato parsa l'input nel caso in cui sia una lista di pairs
+%% Il predicato parsa l'input nel caso in cui sia una lista di pairs
 
 %% caso generale 
 parse_members(Input, Resto, Prec, Succ) :-
@@ -84,9 +81,8 @@ parse_members(Input, Resto, Prec, Succ) :-
     parse_pair(Input, Resto, Prec, Succ),
     !.
 
-%%% parse_elements/4
-%% il predicato è di supporto a parse_array
-%% il predicato parsa l'input nel caso in cui sia una lista di value 
+%%% parse_elements/4 
+%% Il predicato parsa l'input nel caso in cui sia una lista di value 
 %% all'interno di un array
 
 %% caso generale
@@ -105,9 +101,8 @@ parse_elements(Input, Resto, Prec, Succ) :-
     append(Prec, [Value], Succ),
     !.
 
-%%% parse_pair/4
-%% il predicato è di supporto a parse_members
-%% il predicato parsa l'input nel caso in cui sia una pair
+%%% parse_pair/4 
+%% Il predicato parsa l'input nel caso in cui sia una pair
 
 parse_pair(Input, Resto_value, Prec, Succ) :-
     parse_string(Input, Resto_stringa, String),
@@ -117,10 +112,9 @@ parse_pair(Input, Resto_value, Prec, Succ) :-
     parse_value(Resto_senza_dp_pulito, Resto_value, Value),
     append(Prec, [(String, Value)], Succ).
 
-%%% parse_string/3
-%% il predicato è di supporto
-%% il predicato è vero quando dalla lista di char Input può essere estratta la
-%% stringa String e con rimanente la lista di char Resto 
+%%% parse_string/3 
+%% Il predicato e' vero quando dalla lista di char Input può essere estratta la
+%% stringa String e con la rimanente lista di char Resto 
 
 %% caso stringa con apici 'stringa'
 parse_string(Input, Resto, String) :-
@@ -138,9 +132,8 @@ parse_string(Input, Resto, Key) :-
     tronca_char("\"", Value_char_dp, Resto),
     string_chars(Key, Key_char).
 
-%%% parse_value/3
-%% il predicato è di supporto
-%% il predicato determina il tipo di value Input e la parsa nel modo corretto
+%%% parse_value/3 
+%% Il predicato determina il tipo di value Input e la parsa nel modo corretto
 
 %% caso string
 parse_value(Input, Resto, Output) :-
@@ -163,9 +156,8 @@ parse_value(Input, Resto, Output) :-
     !.
 
 
-%%% parse_number/3
-%% il predicato è di supporto
-%% il predicato parsa l'input nel caso in cui sia un numero (integer o float)
+%%% parse_number/3 
+%% Il predicato parsa l'input nel caso in cui sia un numero (integer o float)
 
 %% caso numero float (numero.numero)
 parse_number(Input, Resto, Num) :-
@@ -224,7 +216,7 @@ digit('8').
 digit('9').
 
 %%% spezza_string_apice/3 
-%% il predicato cerca carattere per carattere l'apice e poi quando lo
+%% Il predicato cerca carattere per carattere l'apice e poi quando lo
 %% trova restituisce le 2 liste a dx e a sx di esso
 %% N.B. Le 2 liste sono invertite
 %% "asd' : 123"=> "' : 123" e "asd"
@@ -244,7 +236,7 @@ spezza_string_apice([H | Tail1], X, [H | Tail2]) :-
 
 
 %%% spezza_string_virgolette/3
-%% il predicato è analogo a spezza_string_apice,
+%% Il predicato e' analogo a spezza_string_apice,
 %% ma con le virgolette al posto dell'apice
 
 %% caso in cui trovo un apice 
@@ -261,7 +253,7 @@ spezza_string_virgolette([H | Tail1], X, [H | Tail2]) :-
 
 
 %%% pulisci_stringa/2
-%% Il predicato è vero quando la lista a dx è uguale alla lista a sx,
+%% Il predicato e' vero quando la lista a dx e' uguale alla lista a sx,
 %% ma senza i caratteri spazio iniziali  
 
 pulisci_stringa([],[]) :- !.
@@ -274,13 +266,12 @@ pulisci_stringa([Char | Tail], Lista_pulita) :-
 pulisci_stringa([H | Tail], [H | Tail]) :- !.
 
 %%% is_spazio/1
-%% Il predicato è di controllo
 is_spazio(' ').
 is_spazio('\n').
 is_spazio('\t').
 
 %%% json_access/3
-%% Il predicato è  vero quando il terzo argomento è recuperabile 
+%% Il predicato e' vero quando il terzo argomento e' recuperabile 
 %% seguendo la catena di campi presenti nel secondo argomento
 %% (una lista) a partire dal primo argomento (un json-parsato).
 %% Un campo rappresentato da N (con N un numero maggiore o
@@ -311,8 +302,7 @@ json_access(JSON_obj, [X|Xs], Finale) :-
     json_access(Annidato, Xs, Finale).
 
 
-%%% json_access_supp/3
-%% Il predicato è di supporto a json_access
+%%% json_access_supp/3 
 %% Il predicato controlla gli elementi di un array
 
 % Caso oggetto
@@ -348,7 +338,7 @@ cerca_posizione([_ | Tail], Contatore, Risultato) :-
 
 
 %%% json_read/2
-%% Il predicato è vero quando Filename è il nome di un file .json e Parsed è
+%% Il predicato e' vero quando Filename e' il nome di un file .json e Parsed e'
 %% il contenuto del file parsato
 
 json_read(Filename, Parsed) :-
@@ -359,10 +349,9 @@ json_read(Filename, Parsed) :-
     atom_codes(JSONString, Ascii_pulito),
     json_parse(JSONString, Parsed).
 
-%%% pulisci_ascii/2
-%% Il predicato è di supporto
-%% Il predicato è vero quando il 2° argomento è una lista uguale al 1° 
-%% argomento, ma con tutti i /t, /n sostituiti da uno spazio 
+%%% pulisci_ascii/2 
+%% Il predicato e' vero quando il 2° argomento e' una lista uguale al 1° 
+%% argomento, ma con tutti i \t, \n sostituiti da uno spazio 
 
 pulisci_ascii([], []).
 pulisci_ascii([10 | T1], [32 | T2]) :- %caso \t
@@ -373,7 +362,7 @@ pulisci_ascii([H | T1], [H | T2]) :- %caso generale
     pulisci_ascii(T1, T2), !.
 
 %%% json_dump/2
-%% Il predicato è vero quando il json parsato JSON viene scritto sul file 
+%% Il predicato e' vero quando il json parsato JSON viene scritto sul file 
 %% Filename
 
 json_dump(JSON, Filename) :-
@@ -382,9 +371,8 @@ json_dump(JSON, Filename) :-
     write(Out, JSONString),
     close(Out).
 
-%%% scrivi_json/2
-%% Il predicato è di supporto a json_dump
-%% Il predicato "de-parsa" il json parsato e lo restituisce come stringa
+%%% scrivi_json/2 
+%% Il predicato esegue l'inverso del parsing e restituisce una stringa
 
 %% Caso oggetto vuoto
 scrivi_json(json_obj([]), "{}").
@@ -407,12 +395,12 @@ scrivi_json(json_array(Lista_elementi), JSONString) :-
     concat(Elementi_con_graffa, "]", JSONString).
 
 
-%%% scrivi_object/3
-%% Il predicato è di supporto a scrivi_json
+%%% scrivi_object/3 
 
 scrivi_object([], Prec, Finale) :-
     !,
-    string_concat(Finale, ", ", Prec). % tolgo la virgola extra finale
+    % tolgo la virgola extra finale
+    string_concat(Finale, ", ", Prec). 
 
 scrivi_object([(K,V)| Tail], Prec, Finale) :-
     scrivi_string(K, Key),
@@ -423,12 +411,12 @@ scrivi_object([(K,V)| Tail], Prec, Finale) :-
     string_concat(Prec_KV, ", ", Prec_KV_v),
     scrivi_object(Tail, Prec_KV_v, Finale).
 
-%%% scrivi_array/3
-%% Il predicato è di supporto a scrivi_json
+%%% scrivi_array/3 
 
 scrivi_array([], Prec, Finale) :-
     !,
-    string_concat(Finale, ", ", Prec). % tolgo la virgola extra finale
+    % tolgo la virgola extra finale
+    string_concat(Finale, ", ", Prec). 
 
 scrivi_array([E| Tail], Prec, Finale) :-
     scrivi_value(E, Elemento),
@@ -436,8 +424,7 @@ scrivi_array([E| Tail], Prec, Finale) :-
     string_concat(Prec_el, ", ", Prec_el_v),
     scrivi_array(Tail, Prec_el_v, Finale).
 
-%%% scrivi_value/2
-%% Il predicato è di supporto
+%%% scrivi_value/2 
 
 %% Caso elemento = numero
 scrivi_value(E, E) :-
@@ -447,13 +434,12 @@ scrivi_value(E, E) :-
 scrivi_value(E, R) :-
     scrivi_string(E, R), !.
 
-%% caso elemento = sottooggetto o sottoarray
+%% caso elemento = sotto-oggetto o sotto-array
 scrivi_value(E, R) :-
     scrivi_json(E, R),
     !.
 
-%%% scrivi_string/2
-%% Il predicato è di supporto a scrivi_object
+%%% scrivi_string/2 
 
 scrivi_string(S, R) :-
     string(S),
